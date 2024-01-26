@@ -36,14 +36,16 @@ local function TrackBallData(Ball)
         Velocity = 0
     }
 
-    local OldPosition = Ball.Position
-    local OldTick = tick()
+    local PreviousPosition = Ball.Position
+    local PreviousTick = tick()
 
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
         if IsTarget() then
             local CurrentPosition = Ball.Position
+            local DeltaTime = tick() - PreviousTick
+
             BallData.Distance = (CurrentPosition - workspace.CurrentCamera.Focus.Position).Magnitude
-            BallData.Velocity = (OldPosition - CurrentPosition).Magnitude
+            BallData.Velocity = (PreviousPosition - CurrentPosition).Magnitude / DeltaTime
 
             print("Distance:", BallData.Distance)
             print("Velocity:", BallData.Velocity)
@@ -54,10 +56,8 @@ local function TrackBallData(Ball)
             end
         end
 
-        if (tick() - OldTick >= 1/60) then
-            OldTick = tick()
-            OldPosition = Ball.Position
-        end
+        PreviousTick = tick()
+        PreviousPosition = Ball.Position
     end)
 
     return BallData
@@ -79,8 +79,6 @@ local function startAutoParry()
 
     player.CharacterAdded:Connect(onCharacterAdded)
 
-    local focusedBall = nil  
-
     local function chooseNewFocusedBall()
         local balls = ballsFolder:GetChildren()
         focusedBall = nil
@@ -92,17 +90,15 @@ local function startAutoParry()
         end
     end
 
-    chooseNewFocusedBall()
-
     local function timeUntilImpact(ballVelocity, distanceToPlayer, playerVelocity)
         local directionToPlayer = (character.HumanoidRootPart.Position - focusedBall.Position).Unit
         local velocityTowardsPlayer = ballVelocity:Dot(directionToPlayer) - playerVelocity:Dot(directionToPlayer)
-        
+
         if velocityTowardsPlayer <= 0 then
             return math.huge
         end
-        
-        local distanceToBeCovered = distanceToPlayer - 35
+
+        local distanceToBeCovered = distanceToPlayer - (focusedBall.Velocity.Magnitude * 0.1)  -- Adjust this multiplier as needed
         return distanceToBeCovered / velocityTowardsPlayer
     end
 

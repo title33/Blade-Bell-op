@@ -17,13 +17,11 @@ local function print(...)
 end
 
 local function VerifyBall(Ball)
-    if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
-        return true
-    end
+    return typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls)
 end
 
 local function IsTarget()
-    return (Player.Character and Player.Character:FindFirstChild("Highlight"))
+    return Player.Character and Player.Character:FindFirstChild("Highlight")
 end
 
 local function Parry()
@@ -36,16 +34,14 @@ local function TrackBallData(Ball)
         Velocity = 0
     }
 
-    local PreviousPosition = Ball.Position
-    local PreviousTick = tick()
+    local OldPosition = Ball.Position
+    local OldTick = tick()
 
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
         if IsTarget() then
             local CurrentPosition = Ball.Position
-            local DeltaTime = tick() - PreviousTick
-
             BallData.Distance = (CurrentPosition - workspace.CurrentCamera.Focus.Position).Magnitude
-            BallData.Velocity = (PreviousPosition - CurrentPosition).Magnitude / DeltaTime
+            BallData.Velocity = (OldPosition - CurrentPosition).Magnitude
 
             print("Distance:", BallData.Distance)
             print("Velocity:", BallData.Velocity)
@@ -56,8 +52,10 @@ local function TrackBallData(Ball)
             end
         end
 
-        PreviousTick = tick()
-        PreviousPosition = Ball.Position
+        if (tick() - OldTick >= 1/60) then
+            OldTick = tick()
+            OldPosition = Ball.Position
+        end
     end)
 
     return BallData
@@ -81,24 +79,25 @@ local function startAutoParry()
 
     local function chooseNewFocusedBall()
         local balls = ballsFolder:GetChildren()
-        focusedBall = nil
         for _, ball in ipairs(balls) do
-            if ball:GetAttribute("realBall") == true then
-                focusedBall = ball
-                break
+            if VerifyBall(ball) then
+                return ball
             end
         end
+        return nil
     end
+
+    local focusedBall = chooseNewFocusedBall()
 
     local function timeUntilImpact(ballVelocity, distanceToPlayer, playerVelocity)
         local directionToPlayer = (character.HumanoidRootPart.Position - focusedBall.Position).Unit
         local velocityTowardsPlayer = ballVelocity:Dot(directionToPlayer) - playerVelocity:Dot(directionToPlayer)
-
+        
         if velocityTowardsPlayer <= 0 then
             return math.huge
         end
-
-        local distanceToBeCovered = distanceToPlayer - (focusedBall.Velocity.Magnitude * 0.1)  -- Adjust this multiplier as needed
+        
+        local distanceToBeCovered = distanceToPlayer - 37
         return distanceToBeCovered / velocityTowardsPlayer
     end
 
@@ -115,9 +114,7 @@ local function startAutoParry()
         local charPos = character.PrimaryPart.Position
         local charVel = character.PrimaryPart.Velocity
 
-        if focusedBall and not focusedBall.Parent then
-            chooseNewFocusedBall()
-        end
+        focusedBall = chooseNewFocusedBall()
 
         if not focusedBall then return end
 
@@ -155,11 +152,9 @@ player.CharacterAdded:Connect(function(newCharacter)
 end)
 
 Balls.ChildAdded:Connect(function(Ball)
-    if not VerifyBall(Ball) then
-        return
+    if VerifyBall(Ball) then
+        print("Ball Spawned:", Ball)
+        local BallData = TrackBallData(Ball)
+        table.insert(TrackedBalls, BallData)
     end
-
-    print("Ball Spawned:", Ball)
-    local BallData = TrackBallData(Ball)
-    table.insert(TrackedBalls, BallData)
 end)

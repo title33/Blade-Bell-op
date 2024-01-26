@@ -1,3 +1,12 @@
+function CheckBall()
+    for i, v in pairs(workspace.Balls:GetChildren()) do
+        if v:GetAttribute("target") ~= "" then
+            return {true, v, v:GetAttribute("target"), v.Velocity.Magnitude}
+        end
+    end
+    return {false}
+end
+
 local Debug = false
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -60,68 +69,14 @@ end
 
 local TrackedBalls = {}
 
-Balls.ChildAdded:Connect(function(Ball)
-    if not VerifyBall(Ball) then
-        return
-    end
-
-    print("Ball Spawned:", Ball)
-    local BallData = TrackBallData(Ball)
-    table.insert(TrackedBalls, BallData)
-end)
-
-local player = game:GetService("Players").LocalPlayer
-local workspace = game:GetService("Workspace")
-
-local part = Instance.new("Part")
-part.Size = Vector3.new(4, 4, 4)
-part.Shape = Enum.PartType.Ball
-part.BrickColor = BrickColor.new("Really black")
-part.Transparency = 0.5
-part.CanCollide = false
-part.Parent = workspace
-
-function CalculateParryDistance(ballSpeed)
-    local factor = 1.4
-    return ballSpeed / factor
-end
-
-function CheckBall()
-    for i, v in pairs(workspace.Balls:GetChildren()) do
-        if v:GetAttribute("target") == game.Players.LocalPlayer.Name then
-            return {true, v, v:GetAttribute("target"), v.Velocity.Magnitude}
-        end
-    end
-    return {false}
-end
-
-game:GetService("RunService").Heartbeat:Connect(function()
-    if player.Character then
-        part.Position = player.Character.HumanoidRootPart.Position
-    end
+while true do
+    wait(0.001)
     local ballData = CheckBall()
-    if ballData[1] then
-        local ballSpeed = ballData[4]
-        local requiredDistance = CalculateParryDistance(ballSpeed)
-        
-        local ballPosition = ballData[2].Position
-        if (ballPosition - part.Position).Magnitude <= requiredDistance then
-            game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+    if ballData[1] and ballData[3] == game.Players.LocalPlayer.Name then
+        local distance = game.Players.LocalPlayer:DistanceFromCharacter(ballData[2].Position)
+        local requiredDistance = ballData[4] / 1.5
+        if distance <= requiredDistance then
+            Parry()
         end
     end
-
-    if ballData[1] then
-        local ballSpeed = ballData[4]
-        local newSize = Vector3.new(4, 4, 4) + Vector3.new(ballSpeed / 4, ballSpeed / 4, ballSpeed / 4)
-        part.Size = newSize
-    else
-
-        part.Size = Vector3.new(4, 4, 4)
-    end
-
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Xylo Hub",
-        Text = "Auto Parry Blade Ball 99%",
-        Duration = 5
-    })
-end)
+end

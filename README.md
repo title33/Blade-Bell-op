@@ -1,157 +1,188 @@
 local workspace = game:GetService("Workspace")
 local players = game:GetService("Players")
-local replicatedStorage = game:GetService("ReplicatedStorage")
 local localPlayer = players.LocalPlayer
-local BASE_THRESHOLD = 0.2
-local VELOCITY_SCALING_FACTOR_FAST = 0.050
-local VELOCITY_SCALING_FACTOR_SLOW = 0.1
-local IMMEDIATE_PARRY_DISTANCE = 15
-local IMMEDIATE_HIGH_VELOCITY_THRESHOLD = 85
 local UserInputService = game:GetService("UserInputService")
-local responses = {"lol what", "??", "wdym", "bru what", "mad cuz bad", "skill issue", "cry"}
-local gameEndResponses = {"ggs", "gg :3", "good game", "ggs yall", "wp", "ggs man"}
-local keywords = {"auto parry", "auto", "cheating", "hacking"}
+local replicatedStorage = game:GetService("ReplicatedStorage")
 local heartbeatConnection
-local focusedBall, displayBall = nil, nil
-local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-local ballsFolder = workspace:WaitForChild("Balls")
-local parryButtonPress = replicatedStorage.Remotes.ParryButtonPress
-local abilityButtonPress = replicatedStorage.Remotes.AbilityButtonPress
-local sliderValue = 20
-local distanceVisualizer = nil
-local isRunning = false
-local notifyparried = false
-local PlayerGui = localPlayer:WaitForChild("PlayerGui")
-local Hotbar = PlayerGui:WaitForChild("Hotbar")
-local UseRage = false
 
-local uigrad1 = Hotbar.Block.border1.UIGradient
-local uigrad2 = Hotbar.Ability.border2.UIGradient
+local function startAutoParry()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local runService = game:GetService("RunService")
+    local parryButtonPress = replicatedStorage.Remotes.ParryButtonPress
+    local ballsFolder = workspace:WaitForChild("Balls")
 
-local function isPlayerOnMobile()
-    return UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled or UserInputService.GamepadEnabled)
-end
+    print("Script successfully ran.")
 
-local RayfieldURL = isPlayerOnMobile() and 
-                    'https://raw.githubusercontent.com/Hosvile/Refinement/main/MC%3AArrayfield%20Library' or 
-                    'https://sirius.menu/rayfield'
+    local function onCharacterAdded(newCharacter)
+        character = newCharacter
+    end
 
-local Rayfield = loadstring(game:HttpGet(RayfieldURL))()
+    player.CharacterAdded:Connect(onCharacterAdded)
 
-local Window = Rayfield:CreateWindow({
-   Name = "Blade Ball",
-   LoadingTitle = "Allusive Scripts",
-   LoadingSubtitle = "by Burger",
-   ConfigurationSaving = {
-      Enabled = false,
-      FolderName = "Allusive Scripts",
-      FileName = "Allusive Scripts"
-   },
-   Discord = {
-      Enabled = true,
-      Invite = "zvrK8df8Wj",
-      RememberJoins = true
-   },
-   KeySystem = true,
-   KeySettings = {
-      Title = "Allusive Scripts",
-      Subtitle = "Key System",
-      Note = "Join the discord (discord.gg/zvrK8df8Wj)",
-      FileName = "AllusiveKey",
-      SaveKey = true,
-      GrabKeyFromSite = false,
-      Key = "ZDSIOPHJQPIWEUASOPDIJ"
-   }
-})
+    local focusedBall = nil  
 
-local AutoParry = Window:CreateTab("Auto Parry", 13014537525)
-
-if character then
-    print("Character found.")
-else
-    print("Character not found.")
-    return
-end
-
-local function notify(title, content, duration)
-    Rayfield:Notify({
-        Title = title,
-        Content = content,
-        Duration = duration or 0.7,
-        Image = 10010348543
-    })
-end
-
-local function chooseNewFocusedBall()
-    local balls = ballsFolder:GetChildren()
-    for _, ball in ipairs(balls) do
-        if ball:GetAttribute("realBall") ~= nil and ball:GetAttribute("realBall") == true then
-            focusedBall = ball
-            print(focusedBall.Name)
-            break
-        elseif ball:GetAttribute("target") ~= nil then
-            focusedBall = ball
-            print(focusedBall.Name)
-            break
+    local function chooseNewFocusedBall()
+        local balls = ballsFolder:GetChildren()
+        focusedBall = nil
+        for _, ball in ipairs(balls) do
+            if ball:GetAttribute("realBall") == true then
+                focusedBall = ball
+                break
+            end
         end
     end
-    
-    if focusedBall == nil then
-        print("Debug: Could not find a ball that's the realBall or has a target.")
-        wait(1)
-        chooseNewFocusedBall()
-    end
-    return focusedBall
-end
 
-local function getDynamicThreshold(ballVelocityMagnitude)
-    if ballVelocityMagnitude > 60 then
-        return math.max(0.20, BASE_THRESHOLD - (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR_FAST))
-    else
-        return math.min(0.01, BASE_THRESHOLD + (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR_SLOW))
-    end
-end
+    chooseNewFocusedBall()
 
-local function timeUntilImpact(ballVelocity, distanceToPlayer, playerVelocity)
-    if not character then return end
-    local directionToPlayer = (character.HumanoidRootPart.Position - focusedBall.Position).Unit
-    local velocityTowardsPlayer = ballVelocity:Dot(directionToPlayer) - playerVelocity:Dot(directionToPlayer)
-    
-    if velocityTowardsPlayer <= 0 then
-        return math.huge
+    local function timeUntilImpact(ballVelocity, distanceToPlayer, playerVelocity)
+        local directionToPlayer = (character.HumanoidRootPart.Position - focusedBall.Position).Unit
+        local velocityTowardsPlayer = ballVelocity:Dot(directionToPlayer) - playerVelocity:Dot(directionToPlayer)
+        
+        if velocityTowardsPlayer <= 0 then
+            return math.huge
+        end
+        
+        local distanceToBeCovered = distanceToPlayer - 35
+        return distanceToBeCovered / velocityTowardsPlayer
     end
-    
-    return (distanceToPlayer - sliderValue) / velocityTowardsPlayer
-end
 
-local function updateDistanceVisualizer()
-    local charPos = character and character.PrimaryPart and character.PrimaryPart.Position
-    if charPos and focusedBall then
-        if distanceVisualizer then
-            distanceVisualizer:Destroy()
+    local BASE_THRESHOLD = 0.15
+    local VELOCITY_SCALING_FACTOR = 0.002
+
+    local function getDynamicThreshold(ballVelocityMagnitude)
+        local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR)
+        return math.max(0.12, adjustedThreshold)
+    end
+
+    local function checkBallDistance()
+        if not character:FindFirstChild("Highlight") then return end
+        local charPos = character.PrimaryPart.Position
+        local charVel = character.PrimaryPart.Velocity
+
+        if focusedBall and not focusedBall.Parent then
+            chooseNewFocusedBall()
         end
 
-        local timeToImpactValue = timeUntilImpact(focusedBall.Velocity, (focusedBall.Position - charPos).Magnitude, character.PrimaryPart.Velocity)
-        local ballFuturePosition = focusedBall.Position + focusedBall.Velocity * timeToImpactValue
+        if not focusedBall then return end
 
-        distanceVisualizer = Instance.new("Part")
-        distanceVisualizer.Size = Vector3.new(1, 1, 1)
-        distanceVisualizer.Anchored = true
-        distanceVisualizer.CanCollide = false
-        distanceVisualizer.Position = ballFuturePosition
-        distanceVisualizer.Parent = workspace    
+        local ball = focusedBall
+        local distanceToPlayer = (ball.Position - charPos).Magnitude
+
+        if distanceToPlayer < 10 then
+            parryButtonPress:Fire()
+            return
+        end
+
+        local timeToImpact = timeUntilImpact(ball.Velocity, distanceToPlayer, charVel)
+        local dynamicThreshold = getDynamicThreshold(ball.Velocity.Magnitude)
+
+        if timeToImpact < dynamicThreshold then
+            parryButtonPress:Fire()
+        end
+    end
+    heartbeatConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        checkBallDistance()
+    end)
+end
+
+local function stopAutoParry()
+    if heartbeatConnection then
+        heartbeatConnection:Disconnect()
+        heartbeatConnection = nil
     end
 end
 
-local function checkIfTarget()
-    for _, v in pairs(ballsFolder:GetChildren()) do
-        if v:IsA("Part") and v.BrickColor == BrickColor.new("Really red") then 
-            print("Ball is targetting player.")
-            return true 
-        end 
-    end 
-    return false
-end
+-- Gui to Lua
+-- Version: 3.2
 
-local function isCooldownInEffect(uigradient)
-    return
+-- Instances:
+
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local TextLabel = Instance.new("TextLabel")
+local TextButton = Instance.new("TextButton")
+local TextButton_2 = Instance.new("TextButton")
+
+--Properties:
+
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame.Position = UDim2.new(0.0833889097, 0, 0.562569201, 0)
+Frame.Size = UDim2.new(0, 230, 0, 160)
+
+TextLabel.Parent = Frame
+TextLabel.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+TextLabel.Position = UDim2.new(-0.00203830888, 0, -0.00307044992, 0)
+TextLabel.Size = UDim2.new(0, 230, 0, 25)
+TextLabel.Font = Enum.Font.SourceSans
+TextLabel.Text = "Blade Ball Skidded Auto Parry - nfpw"
+TextLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextLabel.TextScaled = true
+TextLabel.TextSize = 14.000
+TextLabel.TextWrapped = true
+
+TextButton.Parent = Frame
+TextButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+TextButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+TextButton.Position = UDim2.new(0.0700469762, 0, 0.358639956, 0)
+TextButton.Size = UDim2.new(0.321920365, 0, 0.275855243, 0)
+TextButton.Font = Enum.Font.SourceSans
+TextButton.Text = "Enable"
+TextButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextButton.TextScaled = true
+TextButton.TextSize = 14.000
+TextButton.TextStrokeTransparency = 0.000
+TextButton.TextWrapped = true
+
+TextButton_2.Parent = Frame
+TextButton_2.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+TextButton_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+TextButton_2.Position = UDim2.new(0.591082573, 0, 0.358639956, 0)
+TextButton_2.Size = UDim2.new(0.321920365, 0, 0.275855243, 0)
+TextButton_2.Font = Enum.Font.SourceSans
+TextButton_2.Text = "Disable"
+TextButton_2.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextButton_2.TextScaled = true
+TextButton_2.TextSize = 14.000
+TextButton_2.TextStrokeTransparency = 0.000
+TextButton_2.TextWrapped = true
+
+-- Scripts:
+
+local function NHOVBS_fake_script() -- Frame.GuiDrag 
+	local script = Instance.new('LocalScript', Frame)
+
+	local 	Frame = script.Parent.Parent.Frame
+	
+	Frame.Draggable = true
+	Frame.Active = true
+	
+	
+	
+end
+coroutine.wrap(NHOVBS_fake_script)()
+local function HTPDFXZ_fake_script() -- TextButton.LocalScript 
+	local script = Instance.new('LocalScript', TextButton)
+
+	local startButton = script.Parent
+	
+	startButton.MouseButton1Click:Connect(function()
+		startAutoParry()
+	end)
+end
+coroutine.wrap(HTPDFXZ_fake_script)()
+local function ZDNHQM_fake_script() -- TextButton_2.LocalScript 
+	local script = Instance.new('LocalScript', TextButton_2)
+
+	local stopButton = script.Parent
+	
+	stopButton.MouseButton1Click:Connect(function()
+		stopAutoParry()
+	end)
+end
+coroutine.wrap(ZDNHQM_fake_script)()

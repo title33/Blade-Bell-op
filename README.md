@@ -101,38 +101,43 @@ local function startAutoParry()
         return distanceToBeCovered / velocityTowardsPlayer
     end
 
-    local BASE_THRESHOLD = 0.15
-    local VELOCITY_SCALING_FACTOR = 0.002
+local BASE_THRESHOLD = 0.15
+local MIN_THRESHOLD = 0.12
+local VELOCITY_SCALING_FACTOR = 0.002
 
-    local function getDynamicThreshold(ballVelocityMagnitude)
-        local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR)
-        return math.max(0.12, adjustedThreshold)
+local function getDynamicThreshold(ballVelocityMagnitude)
+    local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR)
+    return math.max(MIN_THRESHOLD, adjustedThreshold)
+end
+
+
+
+local function checkBallDistance()
+    if not character:FindFirstChild("Highlight") then return end
+    local charPos = character.PrimaryPart.Position
+    local charVel = character.PrimaryPart.Velocity
+
+    if focusedBall and not focusedBall.Parent then
+        chooseNewFocusedBall()
     end
 
-    local function checkBallDistance()
-        if not character:FindFirstChild("Highlight") then return end
-        local charPos = character.PrimaryPart.Position
-        local charVel = character.PrimaryPart.Velocity
+    if not focusedBall then return end
 
-        focusedBall = chooseNewFocusedBall()
+    local ball = focusedBall
+    local distanceToPlayer = (ball.Position - charPos).Magnitude
 
-        if not focusedBall then return end
-
-        local ball = focusedBall
-        local distanceToPlayer = (ball.Position - charPos).Magnitude
-
-        if distanceToPlayer < 10 then
-            parryButtonPress:Fire()
-            return
-        end
-
-        local timeToImpact = timeUntilImpact(ball.Velocity, distanceToPlayer, charVel)
-        local dynamicThreshold = getDynamicThreshold(ball.Velocity.Magnitude)
-
-        if timeToImpact < dynamicThreshold then
-            parryButtonPress:Fire()
-        end
+    if distanceToPlayer < 10 then
+        parryButtonPress:Fire()
+        return
     end
+
+    local timeToImpact = timeUntilImpact(ball.Velocity, distanceToPlayer, charVel)
+    local dynamicThreshold = getDynamicThreshold(ball.Velocity.Magnitude)
+
+    if timeToImpact < dynamicThreshold then
+        parryButtonPress:Fire()
+    end
+end
 
     heartbeatConnection = game:GetService("RunService").Heartbeat:Connect(function()
         checkBallDistance()

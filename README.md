@@ -101,9 +101,9 @@ local function startAutoParry()
         return distanceToBeCovered / velocityTowardsPlayer
     end
 
-local BASE_THRESHOLD = 0.15
+local BASE_THRESHOLD = 0.20
 local MIN_THRESHOLD = 0.12
-local VELOCITY_SCALING_FACTOR = 0.002
+local VELOCITY_SCALING_FACTOR = 0.001
 
 local function getDynamicThreshold(ballVelocityMagnitude)
     local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR)

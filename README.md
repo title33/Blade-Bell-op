@@ -1,8 +1,3 @@
-local workspace = game:GetService("Workspace")
-local players = game:GetService("Players")
-local replicatedStorage = game:GetService("ReplicatedStorage")
-local heartbeatConnection
-
 local Debug = false
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -17,11 +12,13 @@ local function print(...)
 end
 
 local function VerifyBall(Ball)
-    return typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls)
+    if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
+        return true
+    end
 end
 
 local function IsTarget()
-    return Player.Character and Player.Character:FindFirstChild("Highlight")
+    return (Player.Character and Player.Character:FindFirstChild("Highlight"))
 end
 
 local function Parry()
@@ -63,103 +60,68 @@ end
 
 local TrackedBalls = {}
 
-local function startAutoParry()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local parryButtonPress = replicatedStorage.Remotes.ParryButtonPress
-    local ballsFolder = workspace:WaitForChild("Balls")
-
-    print("Auto-Parry Script successfully ran.")
-
-    local function onCharacterAdded(newCharacter)
-        character = newCharacter
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
-
-    local function chooseNewFocusedBall()
-        local balls = ballsFolder:GetChildren()
-        for _, ball in ipairs(balls) do
-            if VerifyBall(ball) then
-                return ball
-            end
-        end
-        return nil
-    end
-
-    local focusedBall = chooseNewFocusedBall()
-
-    local function timeUntilImpact(ballVelocity, distanceToPlayer, playerVelocity)
-        local directionToPlayer = (character.HumanoidRootPart.Position - focusedBall.Position).Unit
-        local velocityTowardsPlayer = ballVelocity:Dot(directionToPlayer) - playerVelocity:Dot(directionToPlayer)
-        
-        if velocityTowardsPlayer <= 0 then
-            return math.huge
-        end
-        
-        local distanceToBeCovered = distanceToPlayer - 37
-        return distanceToBeCovered / velocityTowardsPlayer
-    end
-
-local BASE_THRESHOLD = 0.10
-local MIN_THRESHOLD = 0.12
-local UPPER_BOUND = 0.16
-
-local function getDynamicThreshold(ballVelocityMagnitude)
-    local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * math.clamp(VELOCITY_SCALING_FACTOR, 0, UPPER_BOUND))
-    return math.max(MIN_THRESHOLD, adjustedThreshold)
-end
-
-
-
-local function checkBallDistance()
-    if not character:FindFirstChild("Highlight") then return end
-    local charPos = character.PrimaryPart.Position
-    local charVel = character.PrimaryPart.Velocity
-
-    if focusedBall and not focusedBall.Parent then
-        chooseNewFocusedBall()
-    end
-
-    if not focusedBall then return end
-
-    local ball = focusedBall
-    local distanceToPlayer = (ball.Position - charPos).Magnitude
-
-    if distanceToPlayer < 10 then
-        parryButtonPress:Fire()
+Balls.ChildAdded:Connect(function(Ball)
+    if not VerifyBall(Ball) then
         return
     end
 
-    local timeToImpact = timeUntilImpact(ball.Velocity, distanceToPlayer, charVel)
-    local dynamicThreshold = getDynamicThreshold(ball.Velocity.Magnitude)
-
-    if timeToImpact < dynamicThreshold then
-        parryButtonPress:Fire()
-    end
-end
-
-    heartbeatConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        checkBallDistance()
-    end)
-end
-
-local function stopAutoParry()
-    if heartbeatConnection then
-        heartbeatConnection:Disconnect()
-        heartbeatConnection = nil
-    end
-end
-
-local player = game.Players.LocalPlayer
-player.CharacterAdded:Connect(function(newCharacter)
-    startAutoParry()
+    print("Ball Spawned:", Ball)
+    local BallData = TrackBallData(Ball)
+    table.insert(TrackedBalls, BallData)
 end)
 
-Balls.ChildAdded:Connect(function(Ball)
-    if VerifyBall(Ball) then
-        print("Ball Spawned:", Ball)
-        local BallData = TrackBallData(Ball)
-        table.insert(TrackedBalls, BallData)
+local player = game:GetService("Players").LocalPlayer
+local workspace = game:GetService("Workspace")
+
+local part = Instance.new("Part")
+part.Size = Vector3.new(4, 4, 4)
+part.Shape = Enum.PartType.Ball
+part.BrickColor = BrickColor.new("Really black")
+part.Transparency = 0.5
+part.CanCollide = false
+part.Parent = workspace
+
+function CalculateParryDistance(ballSpeed)
+    local factor = 1.4
+    return ballSpeed / factor
+end
+
+function CheckBall()
+    for i, v in pairs(workspace.Balls:GetChildren()) do
+        if v:GetAttribute("target") == game.Players.LocalPlayer.Name then
+            return {true, v, v:GetAttribute("target"), v.Velocity.Magnitude}
+        end
     end
+    return {false}
+end
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    if player.Character then
+        part.Position = player.Character.HumanoidRootPart.Position
+    end
+    local ballData = CheckBall()
+    if ballData[1] then
+        local ballSpeed = ballData[4]
+        local requiredDistance = CalculateParryDistance(ballSpeed)
+        
+        local ballPosition = ballData[2].Position
+        if (ballPosition - part.Position).Magnitude <= requiredDistance then
+            game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+        end
+    end
+
+    if ballData[1] then
+        local ballSpeed = ballData[4]
+        local newSize = Vector3.new(4, 4, 4) + Vector3.new(ballSpeed / 4, ballSpeed / 4, ballSpeed / 4)
+        part.Size = newSize
+    else
+
+        part.Size = Vector3.new(4, 4, 4)
+    end
+
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Xylo Hub",
+        Text = "Auto Parry Blade Ball 99%",
+        Duration = 5
+    })
 end)

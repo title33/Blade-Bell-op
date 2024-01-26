@@ -103,10 +103,10 @@ local function startAutoParry()
 
 local BASE_THRESHOLD = 0.10
 local MIN_THRESHOLD = 0.12
-local VELOCITY_SCALING_FACTOR = 0.003
+local UPPER_BOUND = 0.16
 
 local function getDynamicThreshold(ballVelocityMagnitude)
-    local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR)
+    local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * math.clamp(VELOCITY_SCALING_FACTOR, 0, UPPER_BOUND))
     return math.max(MIN_THRESHOLD, adjustedThreshold)
 end
 

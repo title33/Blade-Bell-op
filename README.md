@@ -41,15 +41,13 @@ Balls.ChildAdded:Connect(function(Ball)
 
     print("Ball Spawned: " .. Ball.Name)
 
-    local BallSpeed = 0
-
     local OldPosition = Ball.Position
     local OldTick = tick()
 
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
         if IsTarget() then -- No need to do the math if we're not being attacked.
             local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes, I got the lowest possible grade in accuplacer math.
+            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
 
             print("Distance: " .. Distance .. "\nVelocity: " .. Velocity .. "\nTime: " .. Distance / Velocity)
 
@@ -57,9 +55,8 @@ Balls.ChildAdded:Connect(function(Ball)
                 Parry()
             end
 
-            -- Set the size of the Ball to be proportional to its speed
-            BallSpeed = Velocity
-            Ball.Size = Vector3.new(BallSpeed, BallSpeed, BallSpeed)
+            -- Set the size of the Ball to match its velocity
+            Ball.Size = Vector3.new(Velocity, Velocity, Velocity)
         end
 
         if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.

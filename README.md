@@ -1,73 +1,66 @@
-local StatsService = game:GetService("Stats")
-local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
+local workspace = game:GetService("Workspace")
+local players = game:GetService("Players")
+local runService = game:GetService("RunService")
+local vim = game:GetService("VirtualInputManager")
 
-local Saved = {
-  LastTick = tick(),
-  LastBallPosition = nil,
-  AttemptedParry = false,
-}
+local ballFolder = workspace.Balls
+local indicatorPart = Instance.new("Part")
+indicatorPart.Size = Vector3.new(5, 5, 5)
+indicatorPart.Anchored = true
+indicatorPart.CanCollide = false
+indicatorPart.Transparency = 1
+indicatorPart.BrickColor = BrickColor.new("Bright red")
+indicatorPart.Parent = workspace
 
-local function GetBall()
-  local RealBall, OtherBall = nil, nil
-  for _, Object in pairs(workspace.Balls:GetChildren()) do
-    if Object:GetAttribute("realBall") == true then
-      RealBall = Object
-    else
-      OtherBall = Object
+local lastBallPressed = nil
+local isKeyPressed = false
+
+local function calculatePredictionTime(ball, player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local rootPart = player.Character.HumanoidRootPart
+        local relativePosition = ball.Position - rootPart.Position
+        local velocity = ball.Velocity + rootPart.Velocity 
+        local a = (ball.Size.magnitude / 2) 
+        local b = relativePosition.magnitude
+        local c = math.sqrt(a * a + b * b)
+        local timeToCollision = (c - a) / velocity.magnitude
+        return timeToCollision
     end
-  end
-  return RealBall, OtherBall
+    return math.huge
 end
 
-local function AttemptParry(OtherBall)
-  ReplicatedStorage.Remotes.ParryAttempt:FireServer(1.5, OtherBall.CFrame, (function()
-    local Results = {}
-    for _, Character in pairs(workspace.Alive:GetChildren()) do
-      Results[Character.Name] = Character.HumanoidRootPart.Position
-    end
-    return Results
-  end)(), { math.random(100, 999), math.random(100, 999) })
+local function updateIndicatorPosition(ball)
+    indicatorPart.Position = ball.Position
 end
 
-while task.wait() do
-  local RealBall, OtherBall = GetBall()
-  if RealBall ~= nil and OtherBall ~= nil then
-    if Saved.LastBallPosition ~= nil then
-      if RealBall:GetAttribute("target") == Player.Name then
-        local DeltaT = tick() - Saved.LastTick
-        local VelocityX = (OtherBall.Position.X - Saved.LastBallPosition.X) / DeltaT
-        local VelocityY = (OtherBall.Position.Y - Saved.LastBallPosition.Y) / DeltaT
-        local VelocityZ = (OtherBall.Position.Z - Saved.LastBallPosition.Z) / DeltaT
-        local VelocityMagnitude = math.sqrt(VelocityX^2 + VelocityY^2 + VelocityZ^2)
+local function checkProximityToPlayer(ball, player)
+    local predictionTime = calculatePredictionTime(ball, player)
+    local realBallAttribute = ball:GetAttribute("realBall")
+    local target = ball:GetAttribute("target")
+    
+    local ballSpeedThreshold = math.max(0.4, 0.6 - ball.Velocity.magnitude * 0.01)
 
-        local ServerPing = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
-        local DistanceToPlayer = (Player.Character.HumanoidRootPart.Position - OtherBall.Position).Magnitude
-        local EstimatedTimeToReachPlayer = (ServerPing / VelocityMagnitude) / (ServerPing / DistanceToPlayer)
-        local TimeToParry = 0.2 * (VelocityMagnitude / DistanceToPlayer)
+    if predictionTime <= ballSpeedThreshold and realBallAttribute == true and target == player.Name and not isKeyPressed then
+        vim:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+        wait(0.005)
+        vim:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+        lastBallPressed = ball
+        isKeyPressed = true
+    elseif lastBallPressed == ball and (predictionTime > ballSpeedThreshold or realBallAttribute ~= true or target ~= player.Name) then
+        isKeyPressed = false
+    end
+end
 
-        print(EstimatedTimeToReachPlayer, "<=", TimeToParry)
-
-        if tostring(EstimatedTimeToReachPlayer) ~= "inf" and TimeToParry < 10 then
-          if EstimatedTimeToReachPlayer <= TimeToParry then
-            if not Saved.AttemptedParry then
-              warn("--firing")
-              AttemptParry(OtherBall)
-              Saved.AttemptedParry = true
-            else
-              warn("--attempted")
-            end
-          else
-            Saved.AttemptedParry = false
-          end
+local function checkBallsProximity()
+    local player = players.LocalPlayer
+    if player then
+        for _, ball in pairs(ballFolder:GetChildren()) do
+            checkProximityToPlayer(ball, player)
+            updateIndicatorPosition(ball)
         end
-      else
-        Saved.AttemptedParry = false
-      end
     end
-    Saved.LastBallPosition = OtherBall.Position
-  end
-  Saved.LastTick = tick()
 end
+
+runService.Heartbeat:Connect(checkBallsProximity)
+
+print("Script ran without errors")

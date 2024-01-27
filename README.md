@@ -8,7 +8,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
 local Balls = workspace:WaitForChild("Balls", 9e9)
 
 -- Anticheat bypass
--- loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()  -- ลบส่วนนี้ออกเพื่อหลีกเลี่ยงปัญหาด้านความปลอดภัย
+loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()
 
 -- Functions
 
@@ -34,7 +34,7 @@ end
 
 -- The actual code
 
-local BallPart = Instance.new("Part")  -- ใช้ BallPart แทน Ball
+local BallPart = Instance.new("Part")
 BallPart.Size = Vector3.new(5, 5, 5)
 BallPart.Shape = Enum.PartType.Ball
 BallPart.Material = Enum.Material.ForceField
@@ -60,10 +60,11 @@ Balls.ChildAdded:Connect(function(Ball)
             local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
             local Velocity = (OldPosition - Ball.Position).Magnitude
 
-            print("Distance: " .. Distance .. "\nVelocity: " .. Velocity .. "\nTime to Impact: " .. Distance / Velocity)
+            print("Distance: " .. Distance .. ", Velocity: " .. Velocity)
 
-            local NewSize = math.max(math.min(Velocity * 0.05, 30), 5) -- ปรับขนาดตามความเร็ว กำหนดขนาดต่ำสุดและสูงสุด
-            BallPart.Size = Vector3.new(NewSize, NewSize, NewSize)
+            -- Calculate new size based on ball speed
+            local newSize = Vector3.new(5, 5, 5) + Vector3.new(Velocity / 4, Velocity / 4, Velocity / 4)
+            BallPart.Size = newSize
 
             if (Distance / Velocity) <= 10 then
                 Parry()

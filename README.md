@@ -63,14 +63,10 @@ local function HandleBall(Ball)
     end)
 end
 
-workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("Part") and descendant.Name ~= "Ball" then
-        descendant.Touched:Connect(function(hit)
-            if hit:IsA("Part") and VerifyBall(hit) then
-                HandleBall(hit)
-                print("Ball touched " .. hit.Name)
-            end
-        end)
+BallPart.Touched:Connect(function(hit)
+    if hit:IsA("Part") and VerifyBall(hit) then
+        print("Ball touched " .. hit.Name)
+        Parry()  -- หรือทำการปรับตรงนี้ตามความต้องการ
     end
 end)
 

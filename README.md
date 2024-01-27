@@ -64,10 +64,10 @@ Balls.ChildAdded:Connect(function(Ball)
             print("Distance: " .. Distance .. ", Velocity: " .. Velocity)
 
             -- Calculate new size based on ball speed
-            local newSize = Vector3.new(5, 5, 5) + Vector3.new(Velocity / 4, Velocity / 4, Velocity / 4)
+            local newSize = Vector3.new(5, 5, 5) + Vector3.new(Velocity / 5, Velocity / 5, Velocity / 5)
 
             -- Use TweenService for smoother scaling
-            local scaleTweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+            local scaleTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
             local scaleTween = TweenService:Create(BallPart, scaleTweenInfo, {Size = newSize})
             scaleTween:Play()
 

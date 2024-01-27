@@ -33,7 +33,12 @@ while true do
     if ballData[1] and ballData[3] == player.Name then
         local velocity = ballData[4]
         BallPart.Size = Vector3.new(velocity, velocity, velocity)
-        game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+        
+        -- เพิ่มตรวจสอบว่า BallPart ชนกับบอลหรือไม่
+        local ballHit = BallPart:IsA("BasePart") and BallPart:IsDescendantOf(workspace.Balls)
+        if ballHit then
+            game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+        end
     end
     wait()
 end

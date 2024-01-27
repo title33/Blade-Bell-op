@@ -40,7 +40,7 @@ while true do
         local velocity = ballData[4]
 
         -- ตรวจสอบขนาดให้ไม่เกิน 45
-        local newSize = math.min(velocity, ุ60)
+        local newSize = math.min(velocity, 60)
         BallPart.Size = Vector3.new(newSize, newSize, newSize)
 
         -- เช็คการชนของบอลกับ BallPart

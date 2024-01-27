@@ -1,23 +1,20 @@
+local Ball = Instance.new("Part")
+Ball.Size = Vector3.new(5, 5, 5)
+Ball.Shape = Enum.PartType.Ball
+Ball.Material = Enum.Material.ForceField
+Ball.CanQuery = false
+Ball.CanTouch = false
+Ball.CanCollide = false
+Ball.CastShadow = false
+Ball.Color = Color3.fromRGB(255, 255, 255)
+Ball.Parent = workspace
+
 local player = game.Players.LocalPlayer
-local runService = game:GetService("RunService")
+local character = player.Character or player.CharacterAdded:Wait()
 
-local ballRadius = 2.5
-local ballColor = Color3.new(1, 1, 1)
-
-local ball = Instance.new("Part")
-ball.Size = Vector3.new(ballRadius * 2, ballRadius * 2, ballRadius * 2)
-ball.Shape = Enum.PartType.Ball
-ball.Material = Enum.Material.ForceField
-ball.CanQuery = false
-ball.CanTouch = false
-ball.CanCollide = false
-ball.CastShadow = false
-ball.Color = ballColor
-ball.Parent = workspace
-
-runService.RenderStepped:Connect(function()
-    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local rootPart = player.Character.HumanoidRootPart
-        ball.Position = rootPart.Position
+while true do
+    wait()
+    if character and character.PrimaryPart then  -- ตรวจสอบว่าตัวละครพร้อมใช้งาน
+        Ball.CFrame = character.PrimaryPart.CFrame  -- ตั้งค่า CFrame ของลูกบอลให้เท่ากับ CFrame ของตัวละคร
     end
-end)
+end

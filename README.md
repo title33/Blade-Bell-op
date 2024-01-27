@@ -65,7 +65,7 @@ local function HandleBall(Ball)
     end)
 end
 
-workspace.DescendantAdded:Connect(function(descendant)
+workspace.ChildAdded:Connect(function(descendant)
     if descendant:IsA("Part") and descendant.Name ~= "Ball" then
         descendant.Touched:Connect(function(hit)
             if hit:IsA("Part") and VerifyBall(hit) then
@@ -75,6 +75,7 @@ workspace.DescendantAdded:Connect(function(descendant)
         end)
     end
 end)
+
 
 game:GetService("RunService").Heartbeat:Connect(function()
     if Player.Character then

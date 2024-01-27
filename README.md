@@ -33,15 +33,14 @@ Balls.ChildAdded:Connect(function(Ball)
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
         if IsTarget() then
             local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local Velocity = (OldPosition - Ball.Position).Magnitude
+           local Velocity = Ball.Velocity.Magnitude
 
             if (Distance / Velocity) <= 10 then
                 Parry()
             end
 
-            local newSize = Vector3.new(20, 20, 20) * Velocity
-            BallPart.Size = newSize
-        end
+local newSize = Vector3.new(20, 20, 20) * Velocity
+BallPart.Size = newSize
 
         if (tick() - OldTick >= 1/60) then
             OldTick = tick()

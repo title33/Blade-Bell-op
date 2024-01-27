@@ -1,15 +1,14 @@
-local Debug = false -- Set this to true if you want my debug output.
+local Debug = false
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
+local workspace = game:GetService("Workspace")
 
 local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
-local Balls = Workspace:WaitForChild("Balls", 9e9)
+local Balls = workspace:WaitForChild("Balls", 9e9)
 
--- Anticheat bypass (if applicable)
--- loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()
+-- Anticheat bypass
+loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()
 
 -- Functions
 
@@ -33,58 +32,61 @@ local function Parry() -- Parries.
     Remotes:WaitForChild("ParryButtonPress"):Fire()
 end
 
--- Create the protective ball
-local ProtectiveBall = Instance.new("Part")
-ProtectiveBall.Size = Vector3.new(20, 20, 20)
-ProtectiveBall.Shape = Enum.PartType.Ball
-ProtectiveBall.Material = Enum.Material.ForceField
-ProtectiveBall.CanQuery = false
-ProtectiveBall.CanTouch = false
-ProtectiveBall.CanCollide = true -- Enable collisions for protection
-ProtectiveBall.CastShadow = false
-ProtectiveBall.Color = Color3.fromRGB(255, 255, 255)
-ProtectiveBall.Parent = Workspace
+-- The actual code
 
-RunService.Heartbeat:Connect(function()
-    if Player.Character then
-        ProtectiveBall.Position = Player.Character.HumanoidRootPart.Position
-    end
-end)
-
--- Collision detection and parry
-ProtectiveBall.Touched:Connect(function(TouchPart)
-    if VerifyBall(TouchPart) then
-        print("Protective ball touched by a projectile!")
-        Parry()
-    end
-end)
-
--- The original code to detect incoming balls and parry
 Balls.ChildAdded:Connect(function(Ball)
     if not VerifyBall(Ball) then
         return
     end
 
-    print(`Ball Spawned: {Ball}`)
+    print("Ball Spawned: " .. Ball.Name)
 
-  local OldPosition = Ball.Position
-  local OldTick = tick()
-   
-  Ball:GetPropertyChangedSignal("Position"):Connect(function()
-    if IsTarget() then -- No need to do the math if we're not being attacked.
-      local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-      local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
-       
-      print(`Distance: {Distance}\nVelocity: {Velocity}\nTime: {Distance / Velocity}`)
-     
-      if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
-        Parry()
-      end
-    end
-     
-    if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.
-      OldTick = tick()
-      OldPosition = Ball.Position
-    end
-  end)
+    local OldPosition = Ball.Position
+    local OldTick = tick()
+
+    Ball:GetPropertyChangedSignal("Position"):Connect(function()
+        if IsTarget() then -- No need to do the math if we're not being attacked.
+            local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
+            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
+
+            print("Distance: " .. Distance .. "\nVelocity: " .. Velocity .. "\nTime: " .. Distance / Velocity)
+
+            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
+                Parry()
+            end
+        end
+
+        if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.
+            OldTick = tick()
+            OldPosition = Ball.Position
+        end
+    end)
+end)
+
+local Ball = Instance.new("Part")
+Ball.Size = Vector3.new(20, 20, 20)
+Ball.Shape = Enum.PartType.Ball
+Ball.Material = Enum.Material.ForceField
+Ball.CanQuery = false
+Ball.CanTouch = false
+Ball.CanCollide = false
+Ball.CastShadow = false
+Ball.Color = Color3.fromRGB(255, 255, 255)
+Ball.Parent = workspace
+
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("Part") and descendant.Name ~= "Ball" then
+        descendant.Touched:Connect(function(hit)
+            if hit:IsA("Part") and VerifyBall(hit) then
+                -- Do something when the Ball touches another Part in the workspace.
+                print("Ball touched " .. hit.Name)
+            end
+        end)
+    end
+end)
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    if Player.Character then
+        Ball.Position = Player.Character.HumanoidRootPart.Position
+    end
 end)

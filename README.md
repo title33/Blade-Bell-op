@@ -1,22 +1,23 @@
 local player = game.Players.LocalPlayer
-local character = player.Character
+local runService = game:GetService("RunService")
 
-local circleShape = newCircle(20, 0, 0)
-local circleColor = newColor3(1, 1, 1)
+local ballRadius = 2.5
+local ballColor = Color3.new(1, 1, 1)
 
-local circle = Instance.new("Circle")
-circle.Shape = circleShape
-circle.Color = circleColor
+local ball = Instance.new("Part")
+ball.Size = Vector3.new(ballRadius * 2, ballRadius * 2, ballRadius * 2)
+ball.Shape = Enum.PartType.Ball
+ball.Material = Enum.Material.ForceField
+ball.CanQuery = false
+ball.CanTouch = false
+ball.CanCollide = false
+ball.CastShadow = false
+ball.Color = ballColor
+ball.Parent = workspace
 
-circle.Parent = character
-
-circle.Anchored = true
-circle.Position = character.Torso.Position
-
-circle.Changed:Connect(function()
-  circle.Position = character.Torso.Position
+runService.RenderStepped:Connect(function()
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local rootPart = player.Character.HumanoidRootPart
+        ball.Position = rootPart.Position
+    end
 end)
-
-while true do
-  wait()
-end

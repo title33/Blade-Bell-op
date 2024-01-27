@@ -1,178 +1,76 @@
 local workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
+local players = game:GetService("Players")
+local runService = game:GetService("RunService")
+local vim = game:GetService("VirtualInputManager")
 
-local Players = game:GetService("Players")
-local Local = Players.LocalPlayer
+local ballFolder = workspace.Balls
+local indicatorPart = Instance.new("Part")
+indicatorPart.Anchored = true
+indicatorPart.CanCollide = false
+indicatorPart.Transparency = 0.5
+indicatorPart.BrickColor = BrickColor.new("Bright red")
+indicatorPart.Parent = workspace
 
-local Camera = workspace.CurrentCamera
-local Balls = workspace:WaitForChild("Balls")
+local lastBallPressed = nil
+local isKeyPressed = false
 
-getgenv().Signal = Signal or {}
-
-function PlayerPoints()
-	local tbl = {}
-	for i, v in pairs(Players:GetPlayers()) do
-		local UserId, HumanoidRootPart = tostring(v.UserId), v.Character and v.Character:FindFirstChild("HumanoidRootPart")
-		if HumanoidRootPart and v == Local then
-			warn(v)
-			tbl[UserId] = Camera:WorldToScreenPoint(HumanoidRootPart.Position)
-		end
-	end
-	
-	print(unpack(tbl))
-	table.foreach(tbl, print)
-	return tbl
+local function calculatePredictionTime(ball, player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local rootPart = player.Character.HumanoidRootPart
+        local relativePosition = ball.Position - rootPart.Position
+        local velocity = ball.Velocity + rootPart.Velocity 
+        local a = ball.Size.magnitude / 2
+        local b = relativePosition.magnitude
+        local c = math.sqrt(a * a + b * b)
+        local timeToCollision = (c - a) / velocity.magnitude
+        return timeToCollision, velocity.magnitude
+    end
+    return math.huge, 0
 end
 
-function Parry(speed)
-if Local.Character then
-	local Remote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("ParryAttempt")
-	local WorldToScreenPoint = Camera:WorldToScreenPoint(Local.Character.HumanoidRootPart.Position)
-	local args = {
-		[1] = speed or 0.3,
-		[2] = workspace.CurrentCamera.CFrame,
-		[3] = PlayerPoints(),
-		[4] = {
-			[1] = WorldToScreenPoint.X,
-			[2] = WorldToScreenPoint.Y
-		}
-	}
-	
-	
-	warn("Players:", unpack(args[3]))
-	Remote:FireServer(unpack(args))
-	end
+local function updateIndicatorSize(ball, speed)
+    local sizeMultiplier = 1.5
+    local newSize = Vector3.new(1, 1, 1) * speed * sizeMultiplier
+    indicatorPart.Size = newSize
 end
 
-local Debounce, LastPlayer, LastTime = false
-function Anticipate(Time)
-	if Debounce then return end
-	
-	if LastTime then
-		local Sum = (Time - LastTime)
-		if (Sum >= -25 and Sum <= 25) then
-			print("Anticipated Time:", Sum, "Time:", Time, "LastTime:", LastTime)
-			if Sum >= 25 or Sum <= -25 then
-				return true
-			end
-		end
-	end
-	
-	LastTime = Time
+local function updateIndicatorPosition(ball)
+    indicatorPart.Position = ball.Position
 end
 
--- Function to calculate the time for projectile to reach a target
-function calculateProjectileTime(initialPosition, targetPosition, initialVelocity)
-	local distance = (targetPosition - initialPosition).Magnitude
-	local time = distance / initialVelocity.Magnitude
-	return time
+local function checkProximityToPlayer(ball, player)
+    local predictionTime, ballSpeed = calculatePredictionTime(ball, player)
+    local realBallAttribute = ball:GetAttribute("realBall")
+    local target = ball:GetAttribute("target")
+    
+    local ballSpeedThreshold = math.max(0.4, 0.6 - ballSpeed * 0.01)
+
+    if predictionTime <= ballSpeedThreshold and realBallAttribute == true and target == player.Name and not isKeyPressed then
+        vim:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+        wait(0.005)
+        vim:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+        lastBallPressed = ball
+        isKeyPressed = true
+    elseif lastBallPressed == ball and (predictionTime > ballSpeedThreshold or realBallAttribute ~= true or target ~= player.Name) then
+        isKeyPressed = false
+    end
+
+    
+    if predictionTime ~= math.huge then
+        updateIndicatorSize(ball, ballSpeed)
+        updateIndicatorPosition(ball)
+    end
 end
 
--- Function to calculate the distance between projectile and object
-function calculateDistance(projectilePosition, objectPosition)
-	return math.abs((projectilePosition - objectPosition).Magnitude)
+local function checkBallsProximity()
+    local player = players.LocalPlayer
+    if player then
+        for _, ball in pairs(ballFolder:GetChildren()) do
+            checkProximityToPlayer(ball, player)
+        end
+    end
 end
 
--- Function to check if the object can intercept (parry) the projectile
-function canObjectParry(projectilePosition, objectPosition, projectileVelocity, objectVelocity)
-	local timeToIntercept = calculateProjectileTime(projectilePosition, objectPosition, projectileVelocity)
-	local distanceToIntercept = calculateDistance(projectilePosition + projectileVelocity * timeToIntercept, objectPosition + objectVelocity * timeToIntercept)
-	local Anticipate = Anticipate(timeToIntercept)
-	local isInCloseRange = distanceToIntercept >= 0.10 and distanceToIntercept <= 0.75
-	
-	print("CanParry:", distanceToIntercept, timeToIntercept, Anticipate)
-	
-	local conditions = {
-		(Anticipate and distanceToIntercept <= 75);
-		(distanceToIntercept >= 25 and distanceToIntercept <= 50 and timeToIntercept >= 0.6 and timeToIntercept <= 0.75);
-		(distanceToIntercept >= 15 and distanceToIntercept <= 30 and timeToIntercept >= 0.4 and timeToIntercept <= 0.6);
-		(distanceToIntercept >= 50 and distanceToIntercept <= 75 and timeToIntercept >= 0.6 and timeToIntercept <= 0.75);
-		(distanceToIntercept <= 35 and timeToIntercept >= 0.6 and timeToIntercept <= 0.75);
-		(distanceToIntercept <= 12.5 and timeToIntercept >= 0.5 and timeToIntercept <= 0.75);
-		(distanceToIntercept >= 0.020 and distanceToIntercept <= 0.050 and timeToIntercept >= 0.10 and timeToIntercept <= 0.35);
-		(distanceToIntercept >= 75 and distanceToIntercept <= 100 and timeToIntercept >= 0.5 and timeToIntercept <= 0.75);
-		(distanceToIntercept >= 35);
-		(distanceToIntercept <= 0.20);
-		(isInCloseRange);
-	}
-	
-	local r
-	for i, v in pairs(conditions) do
-		if v == true then
-			warn(i, v)
-			r = true
-		end
-	end
-	
-	if isInCloseRange then
-    Parry(0.20)
-else
-end
-	
-	if r then return true end
-end
+runService.Heartbeat:Connect(checkBallsProximity)
 
-function chooseNewFocusedBall()
-	local balls = workspace.Balls:GetChildren()
-	for _, ball in ipairs(balls) do
-		if ball:GetAttribute("realBall") ~= nil and ball:GetAttribute("realBall") == true then
-			focusedBall = ball
-			break
-		elseif ball:GetAttribute("target") ~= nil then
-			focusedBall = ball
-			break
-		end
-	end
-	
-	return focusedBall
-end
-
-function foreach(Ball)
-	local Ball = chooseNewFocusedBall()
-	if (Ball) and not Debounce then
-		for i, v in pairs(Signal) do table.remove(Signal, i); v:Disconnect() end
-		local function Calculation(Delta)
-			local Start, HumanoidRootPart, Player = os.clock(), Local.Character and Local.Character:FindFirstChild("HumanoidRootPart"), Players:FindFirstChild(Ball:GetAttribute("target"))
-			if (Ball and Ball:FindFirstChild("zoomies") and Ball:GetAttribute("target") == Local.Name) and HumanoidRootPart and not Debounce then
-				local timeToReachTarget = calculateProjectileTime(Ball.Position, HumanoidRootPart.Position, Ball.Velocity)
-				local distanceToTarget = calculateDistance(Ball.Position, HumanoidRootPart.Position)
-				local canParry = canObjectParry(Ball.Position, HumanoidRootPart.Position, Ball.Velocity, HumanoidRootPart.Velocity)
-
-				warn(timeToReachTarget, "Distance:", canParry)
-				if canParry then
-					Parry()
-					LastTime = nil
-					Debounce = true
-					local Signal = nil
-					Signal = RunService.Stepped:Connect(function()
-						warn("False:", Ball:GetAttribute("target"), os.clock()-Start, Ball, workspace.Dead:FindFirstChild(Local.Name))
-						if Ball:GetAttribute("target") ~= Local.Name or os.clock()-Start >= 1.25 or not Ball or not workspace.Alive:FindFirstChild(Local.Name) then
-							warn("Set to false")
-							Debounce = false
-							Signal:Disconnect()
-						end
-					end)
-				end
-			elseif (Ball and Ball:FindFirstChild("zoomies") and Ball:GetAttribute("target") ~= Local.Name) and HumanoidRootPart then
-				--local HumanoidRootPart = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-				--local Distance = CalculateDistance(HumanoidRootPart, Delta)
-				LastPlayer = Player
-			end
-		end
-		Signal[#Signal+1] = RunService.Stepped:Connect(Calculation)
-	end
-end
-
-Parry()
-
-function Init()
-	Balls.ChildAdded:Connect(foreach)
-	
-	for i, v in pairs(Balls:GetChildren()) do
-		foreach(v)
-	end
-end
-
-Init()
-
---Local.ChildAdded:Connect(Init)
+print("Script ran without errors")

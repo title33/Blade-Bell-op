@@ -1,82 +1,73 @@
-function CheckBall()
-    for i, v in pairs(workspace.Balls:GetChildren()) do
-        if v:GetAttribute("target") ~= "" then
-            return {true, v, v:GetAttribute("target"), v.Velocity.Magnitude}
-        end
-    end
-    return {false}
-end
-
-local Debug = false
+local StatsService = game:GetService("Stats")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
-local Balls = workspace:WaitForChild("Balls", 9e9)
+local Player = Players.LocalPlayer
 
-local function print(...)
-    if Debug then
-        warn(...)
+local Saved = {
+  LastTick = tick(),
+  LastBallPosition = nil,
+  AttemptedParry = false,
+}
+
+local function GetBall()
+  local RealBall, OtherBall = nil, nil
+  for _, Object in pairs(workspace.Balls:GetChildren()) do
+    if Object:GetAttribute("realBall") == true then
+      RealBall = Object
+    else
+      OtherBall = Object
     end
+  end
+  return RealBall, OtherBall
 end
 
-local function VerifyBall(Ball)
-    if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
-        return true
+local function AttemptParry(OtherBall)
+  ReplicatedStorage.Remotes.ParryAttempt:FireServer(1.5, OtherBall.CFrame, (function()
+    local Results = {}
+    for _, Character in pairs(workspace.Alive:GetChildren()) do
+      Results[Character.Name] = Character.HumanoidRootPart.Position
     end
+    return Results
+  end)(), { math.random(100, 999), math.random(100, 999) })
 end
 
-local function IsTarget()
-    return (Player.Character and Player.Character:FindFirstChild("Highlight"))
-end
+while task.wait() do
+  local RealBall, OtherBall = GetBall()
+  if RealBall ~= nil and OtherBall ~= nil then
+    if Saved.LastBallPosition ~= nil then
+      if RealBall:GetAttribute("target") == Player.Name then
+        local DeltaT = tick() - Saved.LastTick
+        local VelocityX = (OtherBall.Position.X - Saved.LastBallPosition.X) / DeltaT
+        local VelocityY = (OtherBall.Position.Y - Saved.LastBallPosition.Y) / DeltaT
+        local VelocityZ = (OtherBall.Position.Z - Saved.LastBallPosition.Z) / DeltaT
+        local VelocityMagnitude = math.sqrt(VelocityX^2 + VelocityY^2 + VelocityZ^2)
 
-local function Parry()
-    Remotes:WaitForChild("ParryButtonPress"):Fire()
-end
+        local ServerPing = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+        local DistanceToPlayer = (Player.Character.HumanoidRootPart.Position - OtherBall.Position).Magnitude
+        local EstimatedTimeToReachPlayer = (ServerPing / VelocityMagnitude) / (ServerPing / DistanceToPlayer)
+        local TimeToParry = 0.2 * (VelocityMagnitude / DistanceToPlayer)
 
-local function TrackBallData(Ball)
-    local BallData = {
-        Distance = 0,
-        Velocity = 0
-    }
+        print(EstimatedTimeToReachPlayer, "<=", TimeToParry)
 
-    local OldPosition = Ball.Position
-    local OldTick = tick()
-
-    Ball:GetPropertyChangedSignal("Position"):Connect(function()
-        if IsTarget() then
-            local CurrentPosition = Ball.Position
-            BallData.Distance = (CurrentPosition - workspace.CurrentCamera.Focus.Position).Magnitude
-            BallData.Velocity = (OldPosition - CurrentPosition).Magnitude
-
-            print("Distance:", BallData.Distance)
-            print("Velocity:", BallData.Velocity)
-            print("Time:", BallData.Distance / BallData.Velocity)
-
-            if (BallData.Distance / BallData.Velocity) <= 9 then
-                Parry()
+        if tostring(EstimatedTimeToReachPlayer) ~= "inf" and TimeToParry < 10 then
+          if EstimatedTimeToReachPlayer <= TimeToParry then
+            if not Saved.AttemptedParry then
+              warn("--firing")
+              AttemptParry(OtherBall)
+              Saved.AttemptedParry = true
+            else
+              warn("--attempted")
             end
+          else
+            Saved.AttemptedParry = false
+          end
         end
-
-        if (tick() - OldTick >= 1/60) then
-            OldTick = tick()
-            OldPosition = Ball.Position
-        end
-    end)
-
-    return BallData
-end
-
-local TrackedBalls = {}
-
-while true do
-    wait(0.001)
-    local ballData = CheckBall()
-    if ballData[1] and ballData[3] == game.Players.LocalPlayer.Name then
-        local distance = game.Players.LocalPlayer:DistanceFromCharacter(ballData[2].Position)
-        local requiredDistance = ballData[4] / 1.5
-        if distance <= requiredDistance then
-            Parry()
-        end
+      else
+        Saved.AttemptedParry = false
+      end
     end
+    Saved.LastBallPosition = OtherBall.Position
+  end
+  Saved.LastTick = tick()
 end

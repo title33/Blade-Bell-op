@@ -2,7 +2,7 @@ local player = game:GetService("Players").LocalPlayer
 local workspace = game:GetService("Workspace")
 
 local Ball = Instance.new("Part")
-Ball.Size = Vector3.new(5, 5, 5)
+Ball.Size = Vector3.new(20, 20, 20)
 Ball.Shape = Enum.PartType.Ball
 Ball.Material = Enum.Material.ForceField
 Ball.CanQuery = false

@@ -1,17 +1,22 @@
 local player = game.Players.LocalPlayer
-local runService = game:GetService("RunService")
+local character = player.Character
 
-local circleRadius = 20
-local circleColor = Color3.new(1, 1, 1)
+local circleShape = newCircle(20, 0, 0)
+local circleColor = newColor3(1, 1, 1)
 
 local circle = Instance.new("Circle")
-circle.Radius = circleRadius
+circle.Shape = circleShape
 circle.Color = circleColor
-circle.Parent = workspace
 
-runService.RenderStepped:Connect(function()
-    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local rootPart = player.Character.HumanoidRootPart
-        circle.Position = Vector2.new(rootPart.Position.X, rootPart.Position.Z)
-    end
+circle.Parent = character
+
+circle.Anchored = true
+circle.Position = character.Torso.Position
+
+circle.Changed:Connect(function()
+  circle.Position = character.Torso.Position
 end)
+
+while true do
+  wait()
+end

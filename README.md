@@ -29,7 +29,7 @@ local function calculatePredictionTime(ball, player)
 end
 
 local function updateIndicatorSize(ball, speed)
-    local sizeMultiplier = 1.5
+    local sizeMultiplier = 1.5 -- ปรับตัวคูณตามความต้องการ
     local newSize = Vector3.new(1, 1, 1) * speed * sizeMultiplier
     indicatorPart.Size = newSize
 end
@@ -55,10 +55,28 @@ local function checkProximityToPlayer(ball, player)
         isKeyPressed = false
     end
 
-    
+    -- Update indicator size and position
     if predictionTime ~= math.huge then
         updateIndicatorSize(ball, ballSpeed)
         updateIndicatorPosition(ball)
+    end
+end
+
+local function checkPlayerCollision()
+    local player = players.LocalPlayer
+    if player and player.Character then
+        local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            local distance = (indicatorPart.Position - rootPart.Position).Magnitude
+            local collisionDistance = (indicatorPart.Size.X / 2 + rootPart.Size.X / 2)
+            
+            if distance <= collisionDistance then
+                -- Collision occurred, send key event
+                vim:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+                wait(0.005)
+                vim:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+            end
+        end
     end
 end
 
@@ -72,5 +90,6 @@ local function checkBallsProximity()
 end
 
 runService.Heartbeat:Connect(checkBallsProximity)
+runService.Heartbeat:Connect(checkPlayerCollision)
 
 print("Script ran without errors")

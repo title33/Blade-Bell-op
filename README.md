@@ -20,7 +20,7 @@ BallPart.Size = Vector3.new(5, 5, 5)
 BallPart.Shape = Enum.PartType.Ball
 BallPart.Material = Enum.Material.ForceField
 BallPart.CanQuery = false
-BallPart.CanTouch = false
+BallPart.CanTouch = true -- เปลี่ยน CanTouch เป็น true
 BallPart.CanCollide = false
 BallPart.CastShadow = false
 BallPart.Color = Color3.fromRGB(255, 255, 255)
@@ -66,7 +66,7 @@ end
 BallPart.Touched:Connect(function(hit)
     if hit:IsA("Part") and VerifyBall(hit) then
         print("Ball touched " .. hit.Name)
-        Parry()  -- หรือทำการปรับตรงนี้ตามความต้องการ
+        Parry()
     end
 end)
 

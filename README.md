@@ -32,6 +32,12 @@ local function Parry() -- Parries.
     Remotes:WaitForChild("ParryButtonPress"):Fire()
 end
 
+local function UpdateIndicatorSize(BallSpeed)
+    local SizeMultiplier = 1.5
+    local NewSize = Vector3.new(1, 1, 1) * BallSpeed * SizeMultiplier
+    Ball.Size = NewSize
+end
+
 -- The actual code
 
 Balls.ChildAdded:Connect(function(Ball)
@@ -45,21 +51,20 @@ Balls.ChildAdded:Connect(function(Ball)
     local OldTick = tick()
 
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
-        if IsTarget() then -- No need to do the math if we're not being attacked.
+        if IsTarget() then
             local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
+            local Velocity = (OldPosition - Ball.Position).Magnitude
 
             print("Distance: " .. Distance .. "\nVelocity: " .. Velocity .. "\nTime: " .. Distance / Velocity)
 
-            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
+            if (Distance / Velocity) <= 10 then
                 Parry()
             end
 
-            -- Set the size of the Ball to match its velocity
-            Ball.Size = Vector3.new(Velocity, Velocity, Velocity)
+            UpdateIndicatorSize(Velocity)
         end
 
-        if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.
+        if (tick() - OldTick >= 1/60) then
             OldTick = tick()
             OldPosition = Ball.Position
         end
@@ -81,7 +86,6 @@ workspace.DescendantAdded:Connect(function(descendant)
     if descendant:IsA("Part") and descendant.Name ~= "Ball" then
         descendant.Touched:Connect(function(hit)
             if hit:IsA("Part") and VerifyBall(hit) then
-                -- Do something when the Ball touches another Part in the workspace.
                 print("Ball touched " .. hit.Name)
             end
         end)

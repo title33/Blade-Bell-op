@@ -41,23 +41,34 @@ Balls.ChildAdded:Connect(function(Ball)
 
     print("Ball Spawned: " .. Ball.Name)
 
+    local BallPart = Instance.new("Part")
+    BallPart.Size = Vector3.new(20, 20, 20)
+    BallPart.Shape = Enum.PartType.Ball
+    BallPart.Material = Enum.Material.ForceField
+    BallPart.CanQuery = false
+    BallPart.CanTouch = false
+    BallPart.CanCollide = false
+    BallPart.CastShadow = false
+    BallPart.Color = Color3.fromRGB(255, 255, 255)
+    BallPart.Parent = workspace
+
     local OldPosition = Ball.Position
     local OldTick = tick()
 
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
         if IsTarget() then -- No need to do the math if we're not being attacked.
             local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
+            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes, I got the lowest possible grade in accuplacer math.
 
             print("Distance: " .. Distance .. "\nVelocity: " .. Velocity .. "\nTime: " .. Distance / Velocity)
 
-            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
+            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2 am.
                 Parry()
             end
 
-            -- Adjust the size of the Part based on Ball velocity
+            -- Adjust the size of the BallPart based on Velocity
             local newSize = Vector3.new(20, 20, 20) * Velocity
-            Ball.Size = newSize
+            BallPart.Size = newSize
         end
 
         if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.
@@ -67,30 +78,9 @@ Balls.ChildAdded:Connect(function(Ball)
     end)
 end)
 
-local Ball = Instance.new("Part")
-Ball.Size = Vector3.new(20, 20, 20)
-Ball.Shape = Enum.PartType.Ball
-Ball.Material = Enum.Material.ForceField
-Ball.CanQuery = false
-Ball.CanTouch = false
-Ball.CanCollide = false
-Ball.CastShadow = false
-Ball.Color = Color3.fromRGB(255, 255, 255)
-Ball.Parent = workspace
-
-workspace.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("Part") and descendant.Name ~= "Ball" then
-        descendant.Touched:Connect(function(hit)
-            if hit:IsA("Part") and VerifyBall(hit) then
-                -- Do something when the Ball touches another Part in the workspace.
-                print("Ball touched " .. hit.Name)
-            end
-        end)
-    end
-end)
-
 game:GetService("RunService").Heartbeat:Connect(function()
     if Player.Character then
-        Ball.Position = Player.Character.HumanoidRootPart.Position
+        -- Update the position of the BallPart to follow the player
+        BallPart.Position = Player.Character.HumanoidRootPart.Position
     end
 end)

@@ -22,6 +22,20 @@ BallPart.CastShadow = false
 BallPart.Color = Color3.fromRGB(255, 255, 255)
 BallPart.Parent = workspace
 
+local function VerifyBall(Ball)
+    if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
+        return true
+    end
+end
+
+local function IsTarget()
+    return (Player.Character and Player.Character:FindFirstChild("Highlight"))
+end
+
+local function Parry()
+    Remotes:WaitForChild("ParryButtonPress"):Fire()
+end
+
 Balls.ChildAdded:Connect(function(Ball)
     if not VerifyBall(Ball) then
         return
@@ -31,20 +45,20 @@ Balls.ChildAdded:Connect(function(Ball)
     local OldTick = tick()
 
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
-if IsTarget() then
-    local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-    local Velocity = (OldPosition - Ball.Position).Magnitude
+        if IsTarget() then
+            local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
+            local Velocity = (OldPosition - Ball.Position).Magnitude
 
-    print("Distance: " .. Distance .. ", Velocity: " .. Velocity)
+            print("Distance: " .. Distance .. ", Velocity: " .. Velocity)
 
-    if (Distance / Velocity) <= 10 then
-        Parry()
-    end
+            if (Distance / Velocity) <= 10 then
+                Parry()
+            end
 
-    local newSize = Vector3.new(20, 20, 20) * Velocity
-    print("New Size: " .. newSize)
-    BallPart.Size = newSize
-end
+            local newSize = Vector3.new(20, 20, 20) * Velocity
+            print("New Size: " .. newSize)
+            BallPart.Size = newSize
+        end
 
         if (tick() - OldTick >= 1/60) then
             OldTick = tick()

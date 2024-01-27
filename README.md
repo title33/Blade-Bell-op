@@ -1,66 +1,138 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
 local workspace = game:GetService("Workspace")
 local players = game:GetService("Players")
-local runService = game:GetService("RunService")
-local vim = game:GetService("VirtualInputManager")
+local localPlayer = players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local heartbeatConnection
 
-local ballFolder = workspace.Balls
-local indicatorPart = Instance.new("Part")
-indicatorPart.Size = Vector3.new(5, 5, 5)
-indicatorPart.Anchored = true
-indicatorPart.CanCollide = false
-indicatorPart.Transparency = 1
-indicatorPart.BrickColor = BrickColor.new("Bright red")
-indicatorPart.Parent = workspace
+local Window = Rayfield:CreateWindow({
+   Name = "Blade Ball Premium V1",
+   LoadingTitle = "Vet Scripts",
+   LoadingSubtitle = "by Vet",
+   ConfigurationSaving = {
+      Enabled = false,
+      FolderName = "Vet Scripts",
+      FileName = "Vet Scripts"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = " ",
+      RememberJoins = true
+   },
+   KeySystem = true,
+   KeySettings = {
+      Title = "Vet Scripts",
+      Subtitle = "Key System",
+      Note = "Blade Ball Premium V1",
+      FileName = "InfernoKey",
+      SaveKey = true,
+      GrabKeyFromSite = false,
+      Key = "8571jfnaf84n5a73n"
+   }
+})
 
-local lastBallPressed = nil
-local isKeyPressed = false
+local AutoParry = Window:CreateTab("Auto Parry", 13014537525)
 
-local function calculatePredictionTime(ball, player)
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local rootPart = player.Character.HumanoidRootPart
-        local relativePosition = ball.Position - rootPart.Position
-        local velocity = ball.Velocity + rootPart.Velocity 
-        local a = (ball.Size.magnitude / 2) 
-        local b = relativePosition.magnitude
-        local c = math.sqrt(a * a + b * b)
-        local timeToCollision = (c - a) / velocity.magnitude
-        return timeToCollision
+local function startAutoParry()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local runService = game:GetService("RunService")
+    local parryButtonPress = replicatedStorage.Remotes.ParryButtonPress
+    local ballsFolder = workspace:WaitForChild("Balls")
+
+    print("Script successfully ran.")
+
+    local function onCharacterAdded(newCharacter)
+        character = newCharacter
     end
-    return math.huge
-end
 
-local function updateIndicatorPosition(ball)
-    indicatorPart.Position = ball.Position
-end
+    player.CharacterAdded:Connect(onCharacterAdded)
 
-local function checkProximityToPlayer(ball, player)
-    local predictionTime = calculatePredictionTime(ball, player)
-    local realBallAttribute = ball:GetAttribute("realBall")
-    local target = ball:GetAttribute("target")
-    
-    local ballSpeedThreshold = math.max(0.4, 0.6 - ball.Velocity.magnitude * 0.01)
+    local focusedBall = nil  
 
-    if predictionTime <= ballSpeedThreshold and realBallAttribute == true and target == player.Name and not isKeyPressed then
-        vim:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
-        wait(0.005)
-        vim:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
-        lastBallPressed = ball
-        isKeyPressed = true
-    elseif lastBallPressed == ball and (predictionTime > ballSpeedThreshold or realBallAttribute ~= true or target ~= player.Name) then
-        isKeyPressed = false
-    end
-end
-
-local function checkBallsProximity()
-    local player = players.LocalPlayer
-    if player then
-        for _, ball in pairs(ballFolder:GetChildren()) do
-            checkProximityToPlayer(ball, player)
-            updateIndicatorPosition(ball)
+    local function chooseNewFocusedBall()
+        local balls = ballsFolder:GetChildren()
+        focusedBall = nil
+        for _, ball in ipairs(balls) do
+            if ball:GetAttribute("realBall") == true then
+                focusedBall = ball
+                break
+            end
         end
     end
+
+    chooseNewFocusedBall()
+
+    local function timeUntilImpact(ballVelocity, distanceToPlayer, playerVelocity)
+        local directionToPlayer = (character.HumanoidRootPart.Position - focusedBall.Position).Unit
+        local velocityTowardsPlayer = ballVelocity:Dot(directionToPlayer) - playerVelocity:Dot(directionToPlayer)
+        
+        if velocityTowardsPlayer <= 0 then
+            return math.huge
+        end
+        
+        local distanceToBeCovered = distanceToPlayer - 40
+        return distanceToBeCovered / velocityTowardsPlayer
+    end
+
+    local BASE_THRESHOLD = 0.15
+    local VELOCITY_SCALING_FACTOR = 0.002
+
+    local function getDynamicThreshold(ballVelocityMagnitude)
+        local adjustedThreshold = BASE_THRESHOLD - (ballVelocityMagnitude * VELOCITY_SCALING_FACTOR)
+        return math.max(0.12, adjustedThreshold)
+    end
+
+    local function checkBallDistance()
+        if not character:FindFirstChild("Highlight") then return end
+        local charPos = character.PrimaryPart.Position
+        local charVel = character.PrimaryPart.Velocity
+
+        if focusedBall and not focusedBall.Parent then
+            chooseNewFocusedBall()
+        end
+
+        if not focusedBall then return end
+
+        local ball = focusedBall
+        local distanceToPlayer = (ball.Position - charPos).Magnitude
+
+        if distanceToPlayer < 10 then
+            parryButtonPress:Fire()
+            return
+        end
+
+        local timeToImpact = timeUntilImpact(ball.Velocity, distanceToPlayer, charVel)
+        local dynamicThreshold = getDynamicThreshold(ball.Velocity.Magnitude)
+
+        if timeToImpact < dynamicThreshold then
+            parryButtonPress:Fire()
+        end
+    end
+    heartbeatConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        checkBallDistance()
+    end)
 end
 
-runService.Heartbeat:Connect(checkBallsProximity)
+local function stopAutoParry()
+    if heartbeatConnection then
+        heartbeatConnection:Disconnect()
+        heartbeatConnection = nil
+    end
+end
 
-print("Script ran without errors")
+local AutoParryToggle = AutoParry:CreateToggle({
+    Name = "Auto Parry",
+    CurrentValue = false,
+    Flag = "AutoParryFlag",
+    Callback = function(Value)
+        if Value then
+            startAutoParry()
+        else
+            stopAutoParry()
+        end
+    end,
+})

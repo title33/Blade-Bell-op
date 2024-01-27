@@ -8,9 +8,10 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
 local Balls = workspace:WaitForChild("Balls", 9e9)
 
 -- Anticheat bypass
-loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()
+-- loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()  -- ลบส่วนนี้ออกเพื่อหลีกเลี่ยงปัญหาด้านความปลอดภัย
 
 -- Functions
+
 local function print(...) -- Debug print.
     if Debug then
         warn(...)
@@ -32,8 +33,9 @@ local function Parry() -- Parries.
 end
 
 -- The actual code
-local BallPart = Instance.new("Part")
-BallPart.Size = Vector3.new(5, 5, 5) -- Set initial size to be small
+
+local BallPart = Instance.new("Part")  -- ใช้ BallPart แทน Ball
+BallPart.Size = Vector3.new(5, 5, 5)
 BallPart.Shape = Enum.PartType.Ball
 BallPart.Material = Enum.Material.ForceField
 BallPart.CanQuery = false
@@ -53,25 +55,15 @@ Balls.ChildAdded:Connect(function(Ball)
     local OldPosition = Ball.Position
     local OldTick = tick()
 
-    -- Set initial size of the Ball
-    BallPart.Size = Vector3.new(5, 5, 5)
-
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
         if IsTarget() then
             local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
             local Velocity = (OldPosition - Ball.Position).Magnitude
 
-            print("Distance: " .. Distance .. ", Velocity: " .. Velocity)
+            print("Distance: " .. Distance .. "\nVelocity: " .. Velocity .. "\nTime to Impact: " .. Distance / Velocity)
 
-            -- Expand sideways
-            local NewSize = Velocity * 0.05
-            BallPart.Size = Vector3.new(math.max(NewSize, 5), NewSize, NewSize)
-
-            -- Additional conditions for expanding the Part, e.g., expand only when the ball is moving faster than a certain speed
-            if Velocity > 100 then
-                -- Set the direction for expanding the Part, e.g., expand forward
-                BallPart.Size = Vector3.new(NewSize, math.max(NewSize, 5), math.max(NewSize, 5))
-            end
+            local NewSize = math.max(math.min(Velocity * 0.05, 30), 5) -- ปรับขนาดตามความเร็ว กำหนดขนาดต่ำสุดและสูงสุด
+            BallPart.Size = Vector3.new(NewSize, NewSize, NewSize)
 
             if (Distance / Velocity) <= 10 then
                 Parry()

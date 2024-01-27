@@ -27,6 +27,8 @@ function CheckBall()
     return {false}
 end
 
+local lastBallPart = nil  -- เพิ่มตัวแปรเพื่อตรวจสอบว่า BallPart ได้ถูกชนกันหรือไม่
+
 while true do
     wait(0.002)
     local ballData = CheckBall()
@@ -34,11 +36,12 @@ while true do
         local velocity = ballData[4]
         BallPart.Size = Vector3.new(velocity, velocity, velocity)
         
-        -- เพิ่มตรวจสอบว่า BallPart ชนกับบอลหรือไม่
-        local ballHit = BallPart:IsA("BasePart") and BallPart:IsDescendantOf(workspace.Balls)
-        if ballHit then
+        if BallPart ~= lastBallPart then
+            lastBallPart = BallPart
             game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
         end
+    else
+        lastBallPart = nil  -- รีเซ็ตตัวแปรเมื่อไม่มีบอลชน
     end
     wait()
 end

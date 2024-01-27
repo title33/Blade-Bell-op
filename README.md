@@ -1,3 +1,4 @@
+
 local BallPart = Instance.new("Part")
 BallPart.Size = Vector3.new(5, 5, 5)
 BallPart.Shape = Enum.PartType.Ball
@@ -11,7 +12,7 @@ BallPart.Parent = workspace
 
 local player = game.Players.LocalPlayer or game.Players.PlayerAdded:Wait()
 
--- ติดตาม HumanoidRootPart ของผู้เล่น
+-- Track the player's HumanoidRootPart
 game:GetService("RunService").Heartbeat:Connect(function()
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         BallPart.Position = player.Character.HumanoidRootPart.Position
@@ -40,13 +41,14 @@ while true do
         local velocity = ballData[4]
 
         -- ตรวจสอบขนาดให้ไม่เกิน 45
-        local newSize = math.min(velocity, 60)
+        local newSize = math.min(velocity / 60, 45)
         BallPart.Size = Vector3.new(newSize, newSize, newSize)
 
         -- เช็คการชนของบอลกับ BallPart
         local ballPosition = ballData[2].Position
         local requiredDistance = newSize / 1.5
 
+        -- แทนที่ด้วยสูตรการคำนวณระยะทางระหว่างจุดสองจุด
         if (ballPosition - BallPart.Position).Magnitude <= requiredDistance then
             game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
         end

@@ -1,6 +1,7 @@
 local Debug = false
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local workspace = game:GetService("Workspace")
 
 local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -64,7 +65,11 @@ Balls.ChildAdded:Connect(function(Ball)
 
             -- Calculate new size based on ball speed
             local newSize = Vector3.new(5, 5, 5) + Vector3.new(Velocity / 4, Velocity / 4, Velocity / 4)
-            BallPart.Size = newSize
+
+            -- Use TweenService for smoother scaling
+            local scaleTweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+            local scaleTween = TweenService:Create(BallPart, scaleTweenInfo, {Size = newSize})
+            scaleTween:Play()
 
             if (Distance / Velocity) <= 10 then
                 Parry()

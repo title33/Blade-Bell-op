@@ -51,7 +51,7 @@ end
 ballsFolder.ChildAdded:Connect(function()
     print('------------------- Ball Spawned -------------------')
 
-    task.wait(1.5)
+    task.wait(0.01)
 
     local realBall, fakeBall
 

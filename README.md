@@ -1,99 +1,220 @@
-local services = setmetatable({}, { __index = function(self, key)
-    local service = game:GetService(key)
-    self[key] = service
-    return service
-end })
-
-local Players = services.Players
-local Workspace = services.Workspace
-
-local client = Players.LocalPlayer
-
-local ballsFolder = Workspace.Balls
-
-local Util = {}
-do
-    shared.Util = Util
-
-    function Util.getBalls()
-        local realBall, otherBall
-
-        for i = 1, #ballsFolder:GetChildren() do
-            local ball = ballsFolder:GetChildren()[i]
-            if not ball:IsA("BasePart") then continue end
-
-            local isRealBall = ball:GetAttribute("realBall")
-            if isRealBall == nil then continue end
-
-            if isRealBall then
-                realBall = ball
-            else
-                otherBall = ball
-            end
-
-            if realBall and otherBall then break end
-        end
-
-        return realBall, otherBall
-    end
-
-    function Util.isHunting()
-        local realBall = Util.getBalls()
-        if not realBall then return false end
-
-        local target = realBall:GetAttribute("target")
-        if not target then return false end
-
-        return target == client.Name
-    end
+local Rayfield = loadstring(game:HttpGet('https://[Log in to view URL]'))()
+ 
+local Window = Rayfield:CreateWindow({
+   Name = "Blade Ball AUTO PARRY!",
+   LoadingTitle = "Blade Ball Torso",
+   LoadingSubtitle = "by Torso100",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Blade Ball."
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+   KeySystem = true, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Blade Ball | Key",
+      Subtitle = ":)",
+      Note = "https://[Log in to view URL] ( for key )",
+      FileName = "key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = false, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = true, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"QV3YMj9Z"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+ 
+local MainTab = Window:CreateTab("Auto Parry", nil) -- Title, Image
+local MainSection = MainTab:CreateSection("Main")
+ 
+Rayfield:Notify({
+   Title = "LOLOLOLOL",
+   Content = "Blade Ball Gui / BETA",
+   Duration = 5,
+   Image = nil,
+   Actions = { -- Notification Buttons
+      Ignore = {
+         Name = "Okay!",
+         Callback = function()
+         print("The user tapped Okay!")
+      end
+   },
+},
+})
+ 
+local Button = MainTab:CreateButton({
+   Name = "Auto Parry",
+   Callback = function()
+        game:GetService("StarterGui"):SetCore("DevConsoleVisible",false); warn("Exed")
+ 
+local workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+ 
+local Players = game:GetService("Players")
+local Local = Players.LocalPlayer
+ 
+local Camera = workspace.CurrentCamera
+local Balls = workspace:WaitForChild("Balls")
+ 
+getgenv().Signal = Signal or {}
+ 
+function PlayerPoints()
+	local tbl = {}
+	for i, v in pairs(Players:GetPlayers()) do
+		local UserId, HumanoidRootPart = tostring(v.UserId), v.Character and v.Character:FindFirstChild("HumanoidRootPart")
+		if HumanoidRootPart and v == Local then
+			warn(v)
+			tbl[UserId] = Camera:WorldToScreenPoint(HumanoidRootPart.Position)
+		end
+	end
+ 
+	print(unpack(tbl))
+	table.foreach(tbl, print)
+	return tbl
 end
-
-ballsFolder.ChildAdded:Connect(function()
-    print('------------------- Ball Spawned -------------------')
-
-    task.wait(0.01)
-
-    local realBall, fakeBall
-
-    for i = 1, #ballsFolder:GetChildren() do
-        local ball = ballsFolder:GetChildren()[i]
-        if not ball:IsA("BasePart") then continue end
-
-        local currentSpeed = ball.Velocity.Magnitude
-        if currentSpeed == 0 then
-            realBall = ball
-        else
-            fakeBall = ball
-        end
-
-        if realBall and fakeBall then break end
-    end
-
-    if realBall then
-        local usedRemote = false
-        local lastPosition = realBall.Position
-        local lastVelocity = fakeBall.Velocity
-
-        realBall:GetPropertyChangedSignal("Position"):Connect(function()
-            if not Util.isHunting() then return end
-
-            local playerPosition = client.Character and client.Character.PrimaryPart and client.Character.PrimaryPart.Position
-            if not playerPosition then return end
-
-            local currentSpeed = fakeBall and fakeBall.Velocity.Magnitude or 0
-
-            local predictedPosition = lastPosition + lastVelocity
-            local predictedDistance = (predictedPosition - playerPosition).Magnitude
-
-            lastPosition = realBall.Position
-            lastVelocity = realBall.Velocity
-
-            local timeToReachPlayer = predictedDistance / (currentSpeed == 0 and 1 or currentSpeed)
-            print(timeToReachPlayer)
-
-            if timeToReachPlayer <= 0.3 and not usedRemote then game:GetService("ReplicatedStorage"):WaitForChild("Remotes", 9e9):WaitForChild("ParryButtonPress"):Fire() task.wait(0.1) usedRemote = true elseif timeToReachPlayer > 0.4 then
-                usedRemote = false
-            end
-        end)
-    end
-end)
+ 
+function Parry()
+if Local.Character then
+	local Remote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("ParryAttempt")
+	local WorldToScreenPoint = Camera:WorldToScreenPoint(Local.Character.HumanoidRootPart.Position)
+	local args = {
+		[1] = 0.5,
+		[2] = workspace.CurrentCamera.CFrame,
+		[3] = PlayerPoints(),
+		[4] = {
+			[1] = WorldToScreenPoint.X,
+			[2] = WorldToScreenPoint.Y
+		}
+	}
+ 
+	warn("Players:", unpack(args[3]))
+	Remote:FireServer(unpack(args))
+	end
+end
+ 
+local Debounce, LastPlayer, LastTime = false
+function Anticipate(Time)
+	if Debounce then return end
+ 
+	if LastTime then
+		local Sum = (Time - LastTime)
+		if (Sum >= -35 and Sum <= 35) then
+			print("Anticipated Time:", Sum, "Time:", Time, "LastTime:", LastTime)
+			if Sum >= 35 or Sum <= -35 then
+				return true
+			end
+		end
+	end
+ 
+	LastTime = Time
+end
+ 
+-- Function to calculate the time for projectile to reach a target
+function calculateProjectileTime(initialPosition, targetPosition, initialVelocity)
+	local distance = (targetPosition - initialPosition).Magnitude
+	local time = distance / initialVelocity.Magnitude
+	return time
+end
+ 
+-- Function to calculate the distance between projectile and object
+function calculateDistance(projectilePosition, objectPosition)
+	return math.abs((projectilePosition - objectPosition).Magnitude)
+end
+ 
+-- Function to check if the object can intercept (parry) the projectile
+function canObjectParry(projectilePosition, objectPosition, projectileVelocity, objectVelocity)
+	local timeToIntercept = calculateProjectileTime(projectilePosition, objectPosition, projectileVelocity)
+	local distanceToIntercept = calculateDistance(projectilePosition + projectileVelocity * timeToIntercept, objectPosition + objectVelocity * timeToIntercept)
+	local Anticipate = Anticipate(timeToIntercept)
+ 
+	print("CanParry:", distanceToIntercept, timeToIntercept, Anticipate)
+ 
+	local conditions = {
+		(Anticipate and distanceToIntercept <= 75);
+		(distanceToIntercept >= 35 and distanceToIntercept <= 50 and timeToIntercept <= 0.3);
+		(distanceToIntercept >= 50 and distanceToIntercept <= 75 and timeToIntercept >= 0.3 and timeToIntercept <= 0.75);
+		(distanceToIntercept <= 35 and timeToIntercept <= 0.3);
+		(distanceToIntercept <= 12.5 and timeToIntercept >= 0.3 and timeToIntercept <= 0.75);
+		(distanceToIntercept <= 0.025 and timeToIntercept <= 0.75);
+		(distanceToIntercept >= 75 and distanceToIntercept <= 100 and timeToIntercept <= 0.3);
+	}
+ 
+	local r
+	for i, v in pairs(conditions) do
+		if v == true then
+			warn(i, v)
+			r = true
+		end
+	end
+ 
+	if r then return true end
+end
+ 
+function chooseNewFocusedBall()
+	local balls = workspace.Balls:GetChildren()
+	for _, ball in ipairs(balls) do
+		if ball:GetAttribute("realBall") ~= nil and ball:GetAttribute("realBall") == true then
+			focusedBall = ball
+			break
+		elseif ball:GetAttribute("target") ~= nil then
+			focusedBall = ball
+			break
+		end
+	end
+ 
+	return focusedBall
+end
+ 
+function foreach(Ball)
+	local Ball = chooseNewFocusedBall()
+	if (Ball) and not Debounce then
+		for i, v in pairs(Signal) do table.remove(Signal, i); v:Disconnect() end
+		local function Calculation(Delta)
+			local Start, HumanoidRootPart, Player = os.clock(), Local.Character and Local.Character:FindFirstChild("HumanoidRootPart"), Players:FindFirstChild(Ball:GetAttribute("target"))
+			if (Ball and Ball:FindFirstChild("zoomies") and Ball:GetAttribute("target") == Local.Name) and HumanoidRootPart and not Debounce then
+				local timeToReachTarget = calculateProjectileTime(Ball.Position, HumanoidRootPart.Position, Ball.Velocity)
+				local distanceToTarget = calculateDistance(Ball.Position, HumanoidRootPart.Position)
+				local canParry = canObjectParry(Ball.Position, HumanoidRootPart.Position, Ball.Velocity, HumanoidRootPart.Velocity)
+ 
+				warn(timeToReachTarget, "Distance:", canParry)
+				if canParry then
+					Parry()
+					LastTime = nil
+					Debounce = true
+					local Signal = nil
+					Signal = RunService.Stepped:Connect(function()
+						warn("False:", Ball:GetAttribute("target"), os.clock()-Start, Ball, workspace.Dead:FindFirstChild(Local.Name))
+						if Ball:GetAttribute("target") ~= Local.Name or os.clock()-Start >= 1.25 or not Ball or not workspace.Alive:FindFirstChild(Local.Name) then
+							warn("Set to false")
+							Debounce = false
+							Signal:Disconnect()
+						end
+					end)
+				end
+			elseif (Ball and Ball:FindFirstChild("zoomies") and Ball:GetAttribute("target") ~= Local.Name) and HumanoidRootPart then
+				--local HumanoidRootPart = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+				--local Distance = CalculateDistance(HumanoidRootPart, Delta)
+				LastPlayer = Player
+			end
+		end
+		Signal[#Signal+1] = RunService.Stepped:Connect(Calculation)
+	end
+end
+ 
+Parry()
+ 
+function Init()
+	Balls.ChildAdded:Connect(foreach)
+ 
+	for i, v in pairs(Balls:GetChildren()) do
+		foreach(v)
+	end
+end
+ 
+Init()
+ 
+--Local.ChildAdded:Connect(Init)
+   end,
+})

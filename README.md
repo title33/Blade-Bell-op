@@ -140,8 +140,6 @@ function foreach(Ball)
                     end)
                 end
             elseif (Ball and Ball:FindFirstChild("zoomies") and Ball:GetAttribute("target") ~= Local.Name) and HumanoidRootPart then
-                --local HumanoidRootPart = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-                --local Distance = CalculateDistance(HumanoidRootPart, Delta)
                 LastPlayer = Player
             end
         end

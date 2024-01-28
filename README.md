@@ -1,5 +1,5 @@
 local BallPart = Instance.new("Part")
-BallPart.Size = Vector3.new(50, 50, 50)
+BallPart.Size = Vector3.new(15, 15, 15)
 BallPart.Shape = Enum.PartType.Ball
 BallPart.Material = Enum.Material.ForceField
 BallPart.CanQuery = false
@@ -27,7 +27,7 @@ game:GetService("RunService").Heartbeat:Connect(function()
 end)
 
 while true do
-    wait(0.002)
+    wait(0.01)
     local ballData = CheckBall()
     if ballData[1] and ballData[3] == player.Name then
         local velocity = ballData[4]

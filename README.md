@@ -1,26 +1,29 @@
-function CheckBall()
-    for i, ball in pairs(workspace.Balls:GetChildren()) do
-        local targetPlayer = ball:GetAttribute("target")
-        if targetPlayer ~= "" then
-            return {true, ball, targetPlayer, ball.Velocity.Magnitude}
-        end
-    end
-    return {false}
-end
+local Ball = workspace.Balls -- Assuming a single ball in workspace.Balls
+local OldPosition = Ball.Position
 
-while true do
-    wait(0.002)
+Ball:GetPropertyChangedSignal("Position"):Connect(function()
     local ballData = CheckBall()
     if ballData[1] and ballData[3] == game.Players.LocalPlayer.Name then
         local ball = ballData[2]
+
         local distance = (ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-        local velocity = (ball.Position - ballData[2].Position).Magnitude
-        local requiredTime = distance / velocity
+        local velocity = (OldPosition - ball.Position).Magnitude
 
-        print(string.format("Distance: %f\nVelocity: %f\nTime: %f", distance, velocity, requiredTime))
+        print(`Distance: {distance}\nVelocity: {velocity}\nTime: {distance / velocity}`)
 
-        if requiredTime <= 10 then
+        if (distance / velocity) <= 10 then -- Adjust threshold as needed
             game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
         end
     end
+
+    OldPosition = Ball.Position -- Update for next calculation
+end)
+
+function CheckBall()
+    for i, v in pairs(workspace.Balls:GetChildren()) do
+        if v:GetAttribute("target") ~= "" then
+            return {true, v, v:GetAttribute("target")}
+        end
+    end
+    return {false}
 end

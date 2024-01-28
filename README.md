@@ -1,10 +1,9 @@
-
 local BallPart = Instance.new("Part")
-BallPart.Size = Vector3.new(5, 5, 5)
+BallPart.Size = Vector3.new(45, 45, 45)
 BallPart.Shape = Enum.PartType.Ball
 BallPart.Material = Enum.Material.ForceField
 BallPart.CanQuery = false
-BallPart.CanTouch = false
+BallPart.CanTouch = false  -- Keep this false for visual purposes
 BallPart.CanCollide = false
 BallPart.CastShadow = false
 BallPart.Color = Color3.fromRGB(255, 255, 255)
@@ -12,7 +11,6 @@ BallPart.Parent = workspace
 
 local player = game.Players.LocalPlayer or game.Players.PlayerAdded:Wait()
 
--- Track the player's HumanoidRootPart
 game:GetService("RunService").Heartbeat:Connect(function()
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         BallPart.Position = player.Character.HumanoidRootPart.Position
@@ -28,30 +26,15 @@ function CheckBall()
     return {false}
 end
 
--- เพิ่ม Event สำหรับตรวจสอบการสร้างบอลใหม่
-workspace.Balls.ChildAdded:Connect(function(newBall)
-    -- รีเซ็ตขนาดของ BallPart เมื่อมีการสร้างบอลใหม่
-    BallPart.Size = Vector3.new(5, 5, 5)
-end)
-
-while true do
-    wait(0.002)
-    local ballData = CheckBall()
-    if ballData[1] and ballData[3] == player.Name then
-        local velocity = ballData[4]
-
-        -- ตรวจสอบขนาดให้ไม่เกิน 45
-        local newSize = math.min(velocity / 60, 45)
-        BallPart.Size = Vector3.new(newSize, newSize, newSize)
-
-        -- เช็คการชนของบอลกับ BallPart
-        local ballPosition = ballData[2].Position
-        local requiredDistance = newSize / 1.5
-
-        -- แทนที่ด้วยสูตรการคำนวณระยะทางระหว่างจุดสองจุด
-        if (ballPosition - BallPart.Position).Magnitude <= requiredDistance then
-            game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+BallPart.Touched:Connect(function(hit)
+    if hit:IsA("Part") and hit.Parent == workspace.Balls then  -- Validate ball collision
+        local ballData = CheckBall()
+        if ballData[1] then
+            local distance = player:DistanceFromCharacter(ballData[2].Position)
+            local requiredDistance = ballData[4] / 1.5
+            if distance <= requiredDistance then
+                game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+            end
         end
     end
-    wait()
-end
+end)

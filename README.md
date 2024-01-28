@@ -1,28 +1,25 @@
-function PredictPosition(ball, time)
-    -- ทำนายตำแหน่งโดยใช้ Velocity และเวลาที่กำหนด
-    return ball.Position + ball.Velocity * time
-end
-
 function CheckBall()
-    for _, ball in pairs(workspace.Balls:GetChildren()) do
+    for i, ball in pairs(workspace.Balls:GetChildren()) do
         local targetPlayer = ball:GetAttribute("target")
         if targetPlayer ~= "" then
-            local requiredDistance = ball.Velocity.Magnitude / 1.5
-            return ball, targetPlayer, requiredDistance
+            return {true, ball, targetPlayer, ball.Velocity.Magnitude}
         end
     end
-    return nil
+    return {false}
 end
 
 while true do
-    wait(0.001)  -- ลดระยะเวลา wait เล็กน้อย
-    local ball = CheckBall()
-    if ball and ball[2] == game.Players.LocalPlayer.Name then
-        local distance = game.Players.LocalPlayer:DistanceFromCharacter(ball[1].Position)
-        local requiredTime = distance / ball[1].Velocity.Magnitude
-        local predictedPosition = PredictPosition(ball[1], requiredTime)
+    wait(0.002)
+    local ballData = CheckBall()
+    if ballData[1] and ballData[3] == game.Players.LocalPlayer.Name then
+        local ball = ballData[2]
+        local distance = (ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
+        local velocity = (ball.Position - ballData[2].Position).Magnitude
+        local requiredTime = distance / velocity
 
-        if (game.Players.LocalPlayer:DistanceFromCharacter(predictedPosition) <= ball[3]) then
+        print(string.format("Distance: %f\nVelocity: %f\nTime: %f", distance, velocity, requiredTime))
+
+        if requiredTime <= 10 then
             game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
         end
     end

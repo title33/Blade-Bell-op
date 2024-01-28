@@ -34,15 +34,10 @@ while true do
         BallPart.Size = Vector3.new(velocity, velocity, velocity)
 
         -- ตรวจสอบการชน
-        local ballHit = false
-        for _, descendant in pairs(BallPart:GetDescendants()) do
-            if descendant:IsA("BasePart") and descendant:IsDescendantOf(workspace.Balls) then
-                ballHit = true
-                break
-            end
-        end
+        local ballPosition = ballData[2].Position
+        local requiredDistance = velocity / 1.5
 
-        if ballHit then
+        if (ballPosition - BallPart.Position).Magnitude <= requiredDistance then
             game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
         end
     end

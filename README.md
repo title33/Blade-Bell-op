@@ -1,5 +1,5 @@
 local BallPart = Instance.new("Part")
-BallPart.Size = Vector3.new(15, 15, 15)
+BallPart.Size = Vector3.new(3, 3, 3)  -- Initially set to a reasonable size
 BallPart.Shape = Enum.PartType.Ball
 BallPart.Material = Enum.Material.ForceField
 BallPart.CanQuery = false
@@ -11,6 +11,12 @@ BallPart.Parent = workspace
 
 local player = game.Players.LocalPlayer or game.Players.PlayerAdded:Wait()
 
+game:GetService("RunService").Heartbeat:Connect(function()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        BallPart.Position = player.Character.HumanoidRootPart.Position
+    end
+end)
+
 function CheckBall()
     for i, v in pairs(workspace.Balls:GetChildren()) do
         if v:GetAttribute("target") ~= "" then
@@ -20,26 +26,13 @@ function CheckBall()
     return {false}
 end
 
-game:GetService("RunService").Heartbeat:Connect(function()
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        BallPart.Position = player.Character.HumanoidRootPart.Position
-    end
-end)
-
-while true do
-    wait(0.01)
-    local ballData = CheckBall()
-    if ballData[1] and ballData[3] == player.Name then
-        local velocity = ballData[4]
-        BallPart.Size = Vector3.new(velocity, velocity, velocity)
-
-        -- ตรวจสอบการชน
-        local ballPosition = ballData[2].Position
-        local requiredDistance = velocity / 1.5
-
-        if (ballPosition - BallPart.Position).Magnitude <= requiredDistance then
+BallPart.Touched:Connect(function(hit)
+    if hit:IsA("BasePart") and hit.Parent == workspace.Balls and hit == BallPart then
+        local ballData = CheckBall()
+        if ballData[1] and ballData[3] == player.Name then
+            local velocity = ballData[4]
+            BallPart.Size = Vector3.new(velocity, velocity, velocity) -- Adjust size based on velocity
             game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
         end
     end
-    wait()
-end
+end)

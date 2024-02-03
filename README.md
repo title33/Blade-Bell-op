@@ -9,7 +9,7 @@ function CheckBall()
 end
 
 while true do
-    task.wait(0.001)  -- ลดระยะเวลารอลง
+    task.wait(0.001)
     local ballData = CheckBall()
 
     if ballData[1] and ballData[3] == game.Players.LocalPlayer.Name then
@@ -31,7 +31,7 @@ while true do
         -- ตรวจสอบการ Parry โดยใช้ความเร็วของลูกบอลที่ถูกคำนวณใหม่
         if distance <= (velocityMagnitude / 1.5) and velocityMagnitudeChange >= 50 then
             game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
-            print("Xylo: ParryButtonPress event fired. Prepare for chaos!")
+            print("Xylo: ParryButtonPress event fired Prepare for chaos!")
         end
     end
 end

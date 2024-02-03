@@ -1,63 +1,35 @@
-local Debug = false 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
+while true do
+    wait(0.002)
+    local ballData = CheckBall()
 
-local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local Balls = workspace:WaitForChild("Balls")
+    if ballData[1] and ballData[3] == game.Players.LocalPlayer.Name then
+        local ball = ballData[2]
+        local distance = game.Players.LocalPlayer:DistanceFromCharacter(ball.Position)
+        local velocity = ball.Velocity.Magnitude
 
--- Anticheat bypass (assuming it's legitimate and necessary)
-loadstring(game:GetObjects("rbxassetid://15900013841")[1].Source)()
+        -- Calculate the threshold dynamically based on velocity
+        local parryThreshold = velocity * 0.1 -- Adjust the multiplier as needed
 
--- Functions
-local function print(...)
-    if Debug then
-        warn(...)
-    end
-end
+        -- Calculate the predicted position of the ball after a short duration (0.1 seconds in this case)
+        local predictedPosition = ball.Position + ball.Velocity * 0.1
+        local predictedDistance = (predictedPosition - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
 
-local function VerifyBall(ball)
-    if typeof(ball) == "Instance" and ball:IsA("BasePart") and ball:IsDescendantOf(Balls) and ball:GetAttribute("realBall") == true then
-        return true
-    end
-end
+        if predictedDistance <= parryThreshold then
+            -- Ensure that the player is facing the predicted position of the ball before triggering Parry
+            local playerDirection = (predictedPosition - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Unit
+            local playerForward = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
 
-local function IsTarget()
-    return Player.Character and Player.Character:FindFirstChild("Highlight")
-end
+            local dotProduct = playerDirection:Dot(playerForward)
+            local angle = math.acos(dotProduct)
 
-local function Parry()
-    Remotes:WaitForChild("ParryButtonPress"):FireServer() 
-end
+            -- Set the angle threshold based on your preference (in radians)
+            local angleThreshold = math.rad(30) -- Adjust the angle threshold as needed
 
--- Main logic
-Balls.ChildAdded:Connect(function(ball)
-    if not VerifyBall(ball) then
-        return
-    end
-
-    print(`Ball Spawned: {ball}`)
-
-    local oldPosition = ball.Position
-    local lastUpdate = tick()
-
-    RunService.Heartbeat:Connect(function()
-        if IsTarget() then
-            local distance = (ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local velocity = (ball.Position - oldPosition).Magnitude / (tick() - lastUpdate)  -- คำนวณความเร็วที่แม่นยำ
-
-            print(`Distance: {distance}\nVelocity: {velocity}\nTime: {distance / velocity}`)
-
-            
-            local adjustedTime = tick() - Player.NetworkPing / 2
-            local predictedPosition = ball.Position + ball.Velocity * adjustedTime
-
-            if (player.Character.Position - predictedPosition).Magnitude <= 2 then 
-                Parry()
+            if angle <= angleThreshold then
+                -- Player is facing the predicted position of the ball, trigger Parry
+                game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+                print("Xylo hub")
             end
         end
-
-        oldPosition = ball.Position
-        lastUpdate = tick()
-    end)
-end)
+    end
+end
